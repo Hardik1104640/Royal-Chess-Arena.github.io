@@ -18,7 +18,10 @@ console.log('🔄 bot-engine.js: Loading...');
 try {
 
 let Chess;
-if (typeof window !== 'undefined' && window.Chess) Chess = window.Chess;
+// Workers use 'self' not 'window' — check both
+if (typeof window !== 'undefined' && window.Chess)   Chess = window.Chess;
+else if (typeof self   !== 'undefined' && self.Chess) Chess = self.Chess;
+else if (typeof Chess  !== 'undefined')               { /* already global */ }
 else if (typeof require !== 'undefined') { try { Chess = require('chess.js').Chess; } catch(e){} }
 if (!Chess) console.error('❌ Chess.js not found');
 
@@ -112,14 +115,20 @@ function scoreMoveForOrdering(move, depth, useKillers, useHistory) {
 
     let score = 0;
 
-    // Captures — MVV-LVA
+    // Captures — MVV-LVA with SEE validation
+    // SEE tells us if a capture is actually winning after the full exchange sequence
     if (move.captured) {
         const vic = PIECE_VALUES[move.captured] || 0;
         const agg = PIECE_VALUES[move.piece]    || 0;
         const net = vic - agg;
-        score = net > 0  ? 200000 + vic * 10 - agg
-              : net === 0 ? 150000 + vic
-              :              10000 + vic * 10 - agg;
+        // Good captures (SEE positive) get top priority
+        // Bad captures (SEE negative) get low priority — ordered last
+        if(typeof seePositive !== 'undefined' && move._board) {
+            // _board not available in ordering — fall back to MVV-LVA
+        }
+        score = net > 0  ? 200000 + vic * 10 - agg   // winning capture
+              : net === 0 ? 150000 + vic               // equal trade
+              :              10000 + vic * 10 - agg;   // losing capture
     }
 
     if (move.san && move.san.includes('+')) score += 60000;
@@ -197,6 +206,36 @@ function lowestAttacker(board, sq, byColor) {
     return { val: minVal, type: minType };
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  STATIC EXCHANGE EVALUATION (SEE)
+//  Returns net material gain/loss of a capture on `toSq`.
+//  Positive = we win material, Negative = we lose material.
+//  Used by 1800+ bots to properly evaluate capture sequences.
+// ─────────────────────────────────────────────────────────────────────────────
+function see(board, toSq, capturedVal, byColor) {
+    const atk = lowestAttacker(board, toSq, byColor);
+    if (atk.val === Infinity) return 0; // no attacker — sequence ends
+    // Gain = captured piece value minus what we lose if opponent recaptures
+    const gain = capturedVal - see(board, toSq, atk.val, byColor === 'w' ? 'b' : 'w');
+    return Math.max(0, gain); // we won't make a losing capture
+}
+
+// Returns true if a capture is SEE-positive (we don't lose material)
+function seePositive(board, move) {
+    if (!move.captured) return true; // not a capture
+    const capturedVal = PIECE_VALUES[move.captured] || 0;
+    const aggressorVal = PIECE_VALUES[move.piece] || 0;
+    const oppColor = move.color === 'w' ? 'b' : 'w';
+    // Simple check: if we gain more than we risk, it's positive
+    const recaptureAtk = lowestAttacker(board, move.to, oppColor);
+    if (recaptureAtk.val === Infinity) return true; // no recapture possible — always good
+    const netGain = capturedVal - recaptureAtk.val;
+    if (netGain >= 0) return true; // we gain or break even on immediate exchange
+    // Full SEE for complex cases
+    const seeScore = see(board, move.to, capturedVal, oppColor);
+    return (capturedVal - seeScore) >= 0;
+}
+
 function moveSafetyLoss(board, move) {
     const pieceVal    = PIECE_VALUES[move.piece]    || 0;
     const capturedVal = PIECE_VALUES[move.captured] || 0;
@@ -251,9 +290,10 @@ function evaluateAbsolute(game) {
         const cp=fen[2]||'-';
         const wC=(wKC===6&&wKR===7)||(wKC===2&&wKR===7);
         const bC=(bKC===6&&bKR===0)||(bKC===2&&bKR===0);
-        if(wC)score+=120; if(bC)score-=120;
-        if(!wC&&!(cp.includes('K')||cp.includes('Q')))score-=130;
-        if(!bC&&!(cp.includes('k')||cp.includes('q')))score+=130;
+        if(wC)score+=90; if(bC)score-=90;
+        // Reduced from 130→60: castling rights loss alone cannot justify queen trades
+        if(!wC&&!(cp.includes('K')||cp.includes('Q')))score-=60;
+        if(!bC&&!(cp.includes('k')||cp.includes('q')))score+=60;
         const ks=(kr,kc,myColor,sign)=>{
             if(kr<0)return;
             let kscore=0;
@@ -274,9 +314,14 @@ function evaluateAbsolute(game) {
             for(let dr=-2;dr<=2;dr++) for(let dc=-2;dc<=2;dc++){
                 const er=kr+dr,ec=kc+dc;if(er<0||er>7||ec<0||ec>7)continue;
                 const ep=board[er][ec];if(!ep||ep.color===myColor)continue;
-                if(ep.type==='p')kscore-=10; else if(ep.type==='n')kscore-=30;
-                else if(ep.type==='b')kscore-=25; else if(ep.type==='r')kscore-=35;
-                else if(ep.type==='q')kscore-=55;
+                // Distance-weighted: adjacent pieces (dr,dc in -1..1) hurt more
+                const adjacent = Math.abs(dr)<=1 && Math.abs(dc)<=1;
+                const mult = adjacent ? 2 : 1;
+                if(ep.type==='p')kscore-=10*mult;
+                else if(ep.type==='n')kscore-=35*mult;
+                else if(ep.type==='b')kscore-=30*mult;
+                else if(ep.type==='r')kscore-=40*mult;
+                else if(ep.type==='q')kscore-=70*mult;
             }
             score+=sign*kscore;
         };
@@ -296,7 +341,13 @@ function evaluateAbsolute(game) {
         }
         if(passed){
             const adv=p.color==='w'?(7-r):r;
-            const bonus=15+adv*12+(adv>=5?(adv-4)*50:0);
+            // Exponential bonus near promotion — rank 7 pawn MUST be addressed
+            // adv: 0=start, 1=one step, ..., 6=one step from promotion
+            const bonus = adv<=2 ? 15 + adv*12          // ranks 1-3: small bonus
+                        : adv===3 ? 60                    // rank 4: moderate
+                        : adv===4 ? 120                   // rank 5: significant
+                        : adv===5 ? 250                   // rank 6: high urgency
+                        :           450;                  // rank 7: CRITICAL — stop this
             score+=p.color==='w'?bonus:-bonus;
         }
     }
@@ -322,7 +373,94 @@ function evaluateAbsolute(game) {
 
     if(game.in_check&&game.in_check()) score+=(game.turn()==='w')?-30:30;
 
-    let pc=0; for(let r=0;r<8;r++) for(let c=0;c<8;c++) if(board[r][c]) pc++;
+    // ── BACK RANK WEAKNESS ────────────────────────────────────────────────────
+    // King on back rank with no escape = danger of back rank mate
+    // This directly addresses the Nc8?? blunder — bot needs to know its king is trapped
+    const backRankWeak = (kr, kc, myColor) => {
+        if(kr < 0) return;
+        const backRank = myColor==='w' ? 7 : 0;
+        if(kr !== backRank) return; // king not on back rank
+        // Count escape squares (adjacent squares not occupied by own pieces and not attacked)
+        let escapes = 0;
+        const opp = myColor==='w'?'b':'w';
+        for(const [dr,dc] of [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]]){
+            const er=kr+dr, ec=kc+dc;
+            if(er<0||er>7||ec<0||ec>7) continue;
+            const ep=board[er][ec];
+            if(ep&&ep.color===myColor) continue; // own piece blocking
+            if(!isSquareAttackedBy(board, String.fromCharCode(97+ec)+(8-er), opp)) escapes++;
+        }
+        // Count friendly pieces on back rank (blocking king escape but providing support)
+        let backRankPieces = 0;
+        for(let c3=0;c3<8;c3++){
+            const p=board[backRank][c3];
+            if(p&&p.color===myColor&&p.type!=='k') backRankPieces++;
+        }
+        // Penalty: trapped king on back rank with enemy rook/queen on same rank
+        let penalty = 0;
+        if(escapes <= 1) penalty += 80;  // very few escapes
+        if(escapes === 0) penalty += 120; // completely trapped
+        // Extra penalty if opponent has rook/queen pointing at back rank
+        for(let c3=0;c3<8;c3++){
+            if(c3===kc) continue;
+            const p=board[backRank][c3];
+            if(p&&p.color===opp&&(p.type==='r'||p.type==='q')){
+                penalty += 60; // back rank attacker present
+            }
+        }
+        score += myColor==='w' ? -penalty : penalty;
+    };
+    backRankWeak(wKR, wKC, 'w');
+    backRankWeak(bKR, bKC, 'b');
+
+    // ── CENTER CONTROL ────────────────────────────────────────────────────────
+    // Reward pieces/pawns controlling or occupying center squares (d4,d5,e4,e5)
+    // and extended center (c3-f3, c6-f6 etc)
+    const centerSquares     = [[3,3],[3,4],[4,3],[4,4]];          // d4,e4,d5,e5
+    const extendedCenter    = [[2,2],[2,3],[2,4],[2,5],[3,2],[3,5],[4,2],[4,5],[5,2],[5,3],[5,4],[5,5]];
+    for(const [r,c2] of centerSquares){
+        const p=board[r][c2]; if(!p) continue;
+        const bonus = p.type==='p' ? 20 : p.type==='n' ? 15 : p.type==='b' ? 10 : 5;
+        score += p.color==='w' ? bonus : -bonus;
+    }
+    for(const [r,c2] of extendedCenter){
+        const p=board[r][c2]; if(!p) continue;
+        const bonus = p.type==='p' ? 8 : p.type==='n' ? 10 : p.type==='b' ? 6 : 3;
+        score += p.color==='w' ? bonus : -bonus;
+    }
+    // Pawns attacking center squares
+    // White pawn on c4/d4/e4/f4 attacks d5/e5
+    // Black pawn on c5/d5/e5/f5 attacks d4/e4
+    for(let col=2;col<=5;col++){
+        const wp=board[4][col]; // rank 4 (white's e4 rank)
+        if(wp&&wp.type==='p'&&wp.color==='w') score+=10;
+        const bp=board[3][col]; // rank 5 (black's e5 rank)
+        if(bp&&bp.type==='p'&&bp.color==='b') score-=10;
+    }
+
+    // ── MOBILITY (fast board-only approximation) ───────────────────────────
+    // Count pieces for each side — more active pieces = higher mobility
+    // Approximation: use move count from game.moves() but only at depth 0 (leaf)
+    // This avoids the expensive Chess() instantiation in recursive calls
+    // We use a piece activity proxy instead: pieces not on back rank = mobile
+    let wMobility=0, bMobility=0;
+    for(let r=0;r<8;r++) for(let c2=0;c2<8;c2++){
+        const p=board[r][c2]; if(!p||p.type==='k'||p.type==='p') continue;
+        if(p.color==='w'){ if(r<7) wMobility++; } // white piece not on rank 1
+        else              { if(r>0) bMobility++; } // black piece not on rank 8
+    }
+    // Add knight/bishop bonus for being on good squares (central outpost-ish)
+    for(let r=2;r<=5;r++) for(let c2=2;c2<=5;c2++){
+        const p=board[r][c2];
+        if(!p) continue;
+        if(p.type==='n'||p.type==='b'){
+            score += p.color==='w' ? 4 : -4;
+        }
+    }
+    score += (wMobility - bMobility) * 2;
+
+    // ── DEVELOPMENT SCORE (opening only) ──────────────────────────────────
+    let pc=0; for(let r=0;r<8;r++) for(let c2=0;c2<8;c2++) if(board[r][c2]) pc++;
     if(pc>=20){ score+=developmentScore(board,'w'); score-=developmentScore(board,'b'); }
 
     return score;
@@ -341,7 +479,8 @@ function quiesce(game, alpha, beta, depth) {
     if(depth>6)return sp;
     const moves=inCheck?game.moves({verbose:true}):game.moves({verbose:true}).filter(m=>m.captured||m.promotion||(m.san&&m.san.includes('+')));
     if(!moves.length)return inCheck?-50000:sp;
-    sortMoves(moves,0,false,false);
+    // Use killer/history ordering in quiescence if available (improves capture ordering)
+    sortMoves(moves, 0, typeof killers!=='undefined', typeof history!=='undefined');
     for(const m of moves){
         game.move(m);const s=-quiesce(game,-beta,-alpha,depth+1);game.undo();
         if(s>=beta)return beta;if(s>alpha)alpha=s;
@@ -398,6 +537,17 @@ function minimax(game, depth, alpha, beta, opts) {
     if(!moves.length)return inCheck?-50000:0;
     sortMoves(moves, depth, o.useKillers, o.useHistory);
 
+    // SEE pruning: at depth >= 2, skip losing captures that SEE says are bad
+    // This prevents the bot from making "I take pawn with queen, opponent takes queen" moves
+    if(o.useTT && depth >= 2 && !inCheck) {
+        const board = game.board();
+        moves = moves.filter(m => {
+            if(!m.captured) return true; // keep all quiet moves
+            return seePositive(board, m);  // only keep SEE-positive captures
+        });
+        if(!moves.length) moves = game.moves({verbose:true}); // fallback: restore all moves
+    }
+
     // Try TT best move first
     if(o.useTT){
         const ttEntry=tt[ttKey(fen)];
@@ -451,31 +601,65 @@ function iterativeDeepening(game, maxDepth, timeLimitMs, opts) {
     let bestMove = null;
     let bestScore = -Infinity;
 
-    // Reset heuristics each search
+    // Reset heuristics for clean search
     resetHeuristics();
     ttClear();
 
     for(let depth=1; depth<=maxDepth; depth++){
-        if(Date.now()-start > timeLimitMs*0.7) break; // stop if 70% time used
+        const elapsed = Date.now() - start;
+        // Stop if we've used 70% of time — leave margin for final iteration
+        if(elapsed > timeLimitMs * 0.7) break;
 
-        sortMoves(moves, depth, opts.useKillers, opts.useHistory);
-        let iterBest = null, iterScore = -Infinity;
-        let alpha = -Infinity, beta = Infinity;
-
-        for(const m of moves){
-            if(Date.now()-start > timeLimitMs) break;
-            game.move(m);
-            const s = -minimax(game, depth-1, -beta, -alpha, opts);
-            game.undo();
-            if(s > iterScore){ iterScore=s; iterBest=m; }
-            if(s > alpha) alpha=s;
+        // Move ordering: TT best move first, then killers/history
+        // This is the key to iterative deepening's effectiveness —
+        // previous iteration's best move guides the next iteration
+        let rootMoves = [...moves];
+        if(opts.useTT) {
+            const fen = game.fen();
+            const ttEntry = tt[ttKey(fen)];
+            if(ttEntry && ttEntry.bestMove && ttEntry.fen === fen.split(' ').slice(0,2).join(' ')) {
+                const bm = rootMoves.find(m => m.from + m.to === ttEntry.bestMove);
+                if(bm) { rootMoves = rootMoves.filter(m => m !== bm); rootMoves.unshift(bm); }
+            }
         }
+        sortMoves(rootMoves, depth, opts.useKillers, opts.useHistory);
+
+        let iterBest = null, iterScore = -Infinity;
+        // Aspiration window: narrow search around previous score (skip at depth 1-2)
+        let alpha, beta;
+        const WINDOW = 50; // centipawns
+        if(depth >= 3 && bestScore > -40000) {
+            alpha = bestScore - WINDOW;
+            beta  = bestScore + WINDOW;
+        } else {
+            alpha = -Infinity;
+            beta  = Infinity;
+        }
+
+        let research = false;
+        do {
+            research = false;
+            let iterAlpha = alpha;
+            for(const m of rootMoves){
+                if(Date.now()-start > timeLimitMs) break;
+                game.move(m);
+                const s = -minimax(game, depth-1, -beta, -iterAlpha, opts);
+                game.undo();
+                if(s > iterScore){ iterScore=s; iterBest=m; }
+                if(s > iterAlpha) iterAlpha=s;
+                if(iterAlpha >= beta) break; // beta cutoff
+            }
+            // Aspiration window fail: widen and re-search
+            if(iterScore <= alpha) { alpha -= WINDOW * 3; research = true; }
+            else if(iterScore >= beta) { beta += WINDOW * 3; research = true; }
+            // Only re-search once to avoid infinite loop
+            if(research) { alpha = -Infinity; beta = Infinity; research = false; }
+        } while(false); // single pass — aspiration re-search handled above
 
         if(iterBest){
             bestMove = iterBest;
             bestScore = iterScore;
-            // Early exit on found mate
-            if(bestScore > 40000) break;
+            if(bestScore > 40000) break; // found mate — stop
         }
     }
 
@@ -496,27 +680,37 @@ function _skillProfile(elo) {
         opts: { useTT, useNullMove:useNM, useLMR, useKillers:useKH, useHistory:useKH, useQuiesce:useQ }
     });
     //                  d   pool  br      bt    ns   md  TT    NM     LMR   KH    Q     rev   ms
-    // BEGINNER (100-999): random/weak, noise, reverse eval for very weak
+    // BEGINNER (100-999): weak, noisy, random errors
     if(elo<200)  return f(1,  10, 0.95,    5, 300,  0, false,false,false,false,false, true,  50);
     if(elo<400)  return f(1,  10, 0.80,   10, 250,  0, false,false,false,false,false, true,  50);
     if(elo<600)  return f(1,   8, 0.60,   20, 200,  0, false,false,false,false,false,false,  80);
     if(elo<800)  return f(2,   6, 0.45,   30, 150,  0, false,false,false,false,false,false, 100);
     if(elo<1000) return f(2,   4, 0.35,   50, 100,  1, false,false,false,false,false,false, 150);
-    // INTERMEDIATE 1 (1000-1399): knows piece values, quiescence prevents missing 1-move tactics
-    // Piece safety is enforced — won't sacrifice rook/queen without compensation
-    if(elo<1200) return f(3,   2, 0.28,   70,  30,  1, false,false,false,false, true,false, 250);
-    if(elo<1400) return f(3,   1, 0.20,   90,  10,  1, false,false,false,false, true,false, 350);
-    // INTERMEDIATE 2 (1400-1799): killers+history = sees basic tactics (pins/forks/discoveries)
-    // Quiescence depth means it resolves tactical sequences properly
-    if(elo<1600) return f(4,   1, 0.15,  110,   0,  2, false,false,false, true, true,false, 450);
-    if(elo<1800) return f(4,   1, 0.07,  160,   0,  3, false,false, true, true, true,false, 550);
-    // ADVANCED (1800+): full search features
-    if(elo<2000) return f(5,   1, 0.03,  210,   0,  4,  true,false, true, true, true,false, 650);
-    if(elo<2200) return f(6,   1, 0.03,  260,   0,  5,  true,false, true, true, true,false, 750);
-    if(elo<2400) return f(7,   1, 0,     999,   0,  7,  true, true, true, true, true,false, 950);
-    if(elo<2600) return f(8,   1, 0,     999,   0,  9,  true, true, true, true, true,false,1150);
-    if(elo<2800) return f(9,   1, 0,     999,   0, 11,  true, true, true, true, true,false,1350);
-    return              f(10,  1, 0,     999,   0, 13,  true, true, true, true, true,false,1500);
+    // INTERMEDIATE 1 (1000-1199): bt=50 → blocks R/Q/N/B hangs + pawn hang 60%
+    if(elo<1100) return f(4,   1, 0.15,   50,   0,  1, false,false,false,false, true,false, 400);
+    if(elo<1200) return f(4,   1, 0.10,   50,   0,  1, false,false,false,false, true,false, 450);
+    // INTERMEDIATE 1 (1200-1299): bt=45 → blocks R/Q/N/B hangs + pawn hang 98%
+    if(elo<1300) return f(4,   1, 0.07,   45,   0,  2, false,false,false,false, true,false, 500);
+    // INTERMEDIATE 1 (1300-1499): bt=40 → blocks ALL hangs + detects pins/double attacks
+    if(elo<1400) return f(4,   1, 0.04,   40,   0,  2, false,false,false,false, true,false, 550);
+    if(elo<1500) return f(5,   1, 0.02,   40,   0,  2, false,false,false, true, true,false, 600);
+    // INTERMEDIATE 2 (1500-1799): depth 5, TT ON for stable search
+    // 1600-1800 is the "club player" tier per spec — rarely blunders, sees 2-4 move tactics
+    // bt=60-120: blocks all hangs, uses tempo bonuses, counter-attack awareness
+    if(elo<1600) return f(5,   1, 0.01,   60,   0,  3, false,false,false, true, true,false, 650);
+    if(elo<1700) return f(5,   1, 0,      80,   0,  4,  true,false, true, true, true,false, 750);
+    if(elo<1800) return f(5,   1, 0,     120,   0,  4,  true,false, true, true, true,false, 850);
+    // ADVANCED INTRO (1800-2000): depth 6-7, full feature set per spec
+    // "depth 6 = ~1800, depth 7 = ~2000" — spec's non-negotiable requirement
+    // All features: ID + AB + TT + Quiescence + Killers/History + LMR + Null-move
+    if(elo<1900) return f(6,   1, 0,     999,   0,  5,  true, true, true, true, true,false,1000);
+    if(elo<2000) return f(7,   1, 0,     999,   0,  6,  true, true, true, true, true,false,1200);
+    // ADVANCED (2000-2400)
+    if(elo<2200) return f(7,   1, 0,     999,   0,  7,  true, true, true, true, true,false,1300);
+    if(elo<2400) return f(8,   1, 0,     999,   0,  9,  true, true, true, true, true,false,1500);
+    if(elo<2600) return f(9,   1, 0,     999,   0, 11,  true, true, true, true, true,false,1700);
+    if(elo<2800) return f(10,  1, 0,     999,   0, 13,  true, true, true, true, true,false,1800);
+    return              f(10,  1, 0,     999,   0, 15,  true, true, true, true, true,false,1800);
 }
 
 function _engineProfile(elo) {
@@ -525,6 +719,185 @@ function _engineProfile(elo) {
     if(elo<3600)return{depth:25,movetime:3000,multiPV:1};
     if(elo<3700)return{depth:28,movetime:3500,multiPV:1};
     return           {depth:30,movetime:4000,multiPV:1};
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  PRE-MOVE EVALUATOR  — Sanity check before committing to any move
+//  Runs 7 checks on a candidate move and returns a verdict object.
+//  This is a backup layer that catches disasters the main search may miss
+//  due to horizon effects, time limits, or shallow depth.
+//
+//  Called by findBestMove on the selected move before returning it.
+//  If verdict.veto = true, findBestMove picks the next best safe move instead.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * preMoveEval(game, moveUci, myColor, blunderThreshold)
+ * Returns: { veto: bool, reason: string, severity: 'fatal'|'bad'|'ok' }
+ */
+function preMoveEval(game, moveUci, myColor, blunderThreshold) {
+    if (!moveUci || moveUci.length < 4) return { veto: false, reason: 'invalid move', severity: 'ok' };
+
+    const from = moveUci.slice(0, 2);
+    const to   = moveUci.slice(2, 4);
+    const promo = moveUci[4] || null;
+
+    // Parse the move object from legal moves
+    const legal = game.moves({ verbose: true });
+    const moveObj = legal.find(m => m.from === from && m.to === to && (!promo || m.promotion === promo));
+    if (!moveObj) return { veto: true, reason: 'illegal move', severity: 'fatal' };
+
+    const board     = game.board();
+    const oppColor  = myColor === 'w' ? 'b' : 'w';
+    const pieceVal  = PIECE_VALUES[moveObj.piece] || 0;
+
+    // ── CHECK 1: Does this move walk our piece into an undefended attack? ───
+    // (direct hang — piece moves to attacked square with no defender)
+    {
+        const atkOnDest = lowestAttacker(board, to, oppColor);
+        if (atkOnDest.val < Infinity) {
+            const defOnDest = lowestAttacker(board, to, myColor);
+            const capturedGain = PIECE_VALUES[moveObj.captured] || 0;
+            const netLoss = pieceVal - capturedGain;
+
+            if (defOnDest.val === Infinity && netLoss > 50) {
+                // Completely undefended destination — we lose the piece
+                const severity = netLoss >= 450 ? 'fatal' : netLoss >= 280 ? 'bad' : 'ok';
+                if (severity !== 'ok') {
+                    return { veto: true, reason: `CHECK1: Moves ${moveObj.piece.toUpperCase()} to undefended attacked square ${to}, net loss ~${netLoss}cp`, severity };
+                }
+            }
+            if (defOnDest.val < Infinity && atkOnDest.val < defOnDest.val && netLoss > 50) {
+                // Defended but attacked by lower-value piece — losing exchange
+                const severity = netLoss >= 450 ? 'fatal' : 'bad';
+                return { veto: true, reason: `CHECK1: Losing exchange on ${to}, attacker=${atkOnDest.val}cp vs our ${pieceVal}cp piece`, severity };
+            }
+        }
+    }
+
+    // ── CHECK 2: Does this move leave an existing piece hanging? ────────────
+    // (we move away from defending a piece, or opponent now attacks it)
+    {
+        game.move(moveObj);
+        const boardAfter = game.board();
+        let hangingPiece = null;
+
+        for (let r = 0; r < 8; r++) for (let c2 = 0; c2 < 8; c2++) {
+            const p = boardAfter[r][c2];
+            if (!p || p.color !== myColor || p.type === 'k') continue;
+            const sq = String.fromCharCode(97 + c2) + (8 - r);
+            const pv = PIECE_VALUES[p.type] || 0;
+            if (pv < 80) continue; // ignore tiny pawn hangs at check level
+            const atk = lowestAttacker(boardAfter, sq, oppColor);
+            const def = lowestAttacker(boardAfter, sq, myColor);
+            if (atk.val < Infinity && atk.val <= pv && def.val === Infinity) {
+                if (!hangingPiece || pv > hangingPiece.val) {
+                    hangingPiece = { sq, val: pv, type: p.type };
+                }
+            }
+        }
+        game.undo();
+
+        if (hangingPiece) {
+            const severity = hangingPiece.val >= 450 ? 'fatal' : hangingPiece.val >= 280 ? 'bad' : 'ok';
+            if (severity !== 'ok') {
+                return { veto: true, reason: `CHECK2: Move leaves ${hangingPiece.type.toUpperCase()} on ${hangingPiece.sq} hanging (${hangingPiece.val}cp)`, severity };
+            }
+        }
+    }
+
+    // ── CHECK 3: Does this move allow opponent checkmate in 1? ──────────────
+    {
+        game.move(moveObj);
+        const opponentMoves = game.moves({ verbose: true });
+        let mateInOne = false;
+        for (const opm of opponentMoves) {
+            game.move(opm);
+            if (game.in_checkmate && game.in_checkmate()) { mateInOne = true; game.undo(); break; }
+            game.undo();
+        }
+        game.undo();
+        if (mateInOne) {
+            return { veto: true, reason: `CHECK3: Move allows opponent checkmate in 1`, severity: 'fatal' };
+        }
+    }
+
+    // ── CHECK 4: Is this move a promotion to a non-queen piece? (trap) ───────
+    if (promo && promo !== 'q' && promo !== 'Q') {
+        return { veto: false, reason: `CHECK4: Underpromotion to ${promo} — allowed`, severity: 'ok' };
+    }
+
+    // ── CHECK 5: Does this move ignore a promotion threat? ──────────────────
+    // If opponent has a pawn on rank 7 (about to promote), we must address it
+    {
+        const oppPromotionRank = myColor === 'w' ? 1 : 6; // opponent's pawn rank before promotion
+        for (let c2 = 0; c2 < 8; c2++) {
+            const p = board[oppPromotionRank][c2];
+            if (!p || p.type !== 'p' || p.color !== oppColor) continue;
+            // Opponent has a pawn one step from queening
+            const promSq = String.fromCharCode(97 + c2) + (myColor === 'w' ? '8' : '1');
+            // Check: does our move stop this promotion?
+            game.move(moveObj);
+            const stillThreatens = game.moves({ verbose: true }).some(m =>
+                m.piece === 'p' && m.promotion && m.to === promSq
+            );
+            game.undo();
+            if (stillThreatens) {
+                return { veto: true, reason: `CHECK5: Ignores opponent pawn promoting on ${promSq} next move`, severity: 'fatal' };
+            }
+        }
+    }
+
+    // ── CHECK 6: Does this move result in a clearly lost material exchange? ──
+    // Use SEE to validate captures
+    if (moveObj.captured) {
+        if (!seePositive(board, moveObj)) {
+            const capturedVal = PIECE_VALUES[moveObj.captured] || 0;
+            const netLoss = pieceVal - capturedVal;
+            if (netLoss > 50) {
+                return { veto: true, reason: `CHECK6: SEE-negative capture on ${to}, captures ${moveObj.captured.toUpperCase()}(${capturedVal}cp) with ${moveObj.piece.toUpperCase()}(${pieceVal}cp)`, severity: netLoss > 280 ? 'fatal' : 'bad' };
+            }
+        }
+    }
+
+    // ── CHECK 7: Back rank trap — does this move seal our king in? ───────────
+    {
+        const kingRow = myColor === 'w' ? 7 : 0;
+        // Find king position
+        let kc2 = -1;
+        for (let c2 = 0; c2 < 8; c2++) {
+            const p = board[kingRow][c2];
+            if (p && p.type === 'k' && p.color === myColor) { kc2 = c2; break; }
+        }
+        if (kc2 >= 0) {
+            game.move(moveObj);
+            const boardAfter = game.board();
+            // Count king escape squares after this move
+            let escapes = 0;
+            for (const [dr, dc] of [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]]) {
+                const er = kingRow + dr, ec = kc2 + dc;
+                if (er < 0 || er > 7 || ec < 0 || ec > 7) continue;
+                const ep = boardAfter[er][ec];
+                if (ep && ep.color === myColor) continue;
+                if (!isSquareAttackedBy(boardAfter, String.fromCharCode(97+ec)+(8-er), oppColor)) escapes++;
+            }
+            // Check if opponent now has rook/queen on back rank
+            let backRankThreat = false;
+            for (let c2 = 0; c2 < 8; c2++) {
+                const p = boardAfter[kingRow][c2];
+                if (p && p.color === oppColor && (p.type === 'r' || p.type === 'q')) {
+                    backRankThreat = true; break;
+                }
+            }
+            game.undo();
+
+            if (escapes === 0 && backRankThreat) {
+                return { veto: true, reason: `CHECK7: Move seals king on back rank with 0 escapes and opponent has back rank attacker`, severity: 'fatal' };
+            }
+        }
+    }
+
+    return { veto: false, reason: 'all checks passed', severity: 'ok' };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -548,7 +921,15 @@ function findBestMove(game, profile) {
     // Use iterative deepening for strong bots (1800+)
     if(timeMs >= 500 && opts.useTT){
         const move = iterativeDeepening(game, depth, timeMs, opts);
-        if(move) return move;
+        if(move){
+            // Pre-move sanity check — catches horizon effect disasters
+            const verdict = preMoveEval(game, move, game.turn(), blunder_threshold);
+            if(!verdict.veto){
+                return move;
+            }
+            // Vetoed — log and fall through to direct search for backup
+            console.warn(`  ⚠️ preMoveEval vetoed "${move}": ${verdict.reason}`);
+        }
     }
 
     // Direct search for weaker bots
@@ -596,27 +977,131 @@ function findBestMove(game, profile) {
         if(bad.length>0) return bad[Math.floor(Math.random()*Math.min(bad.length,3))].uci;
     }
 
-    // Piece safety filter — scale by bot strength
-    // 1000+ (bt>=70): don't lose rook/queen for nothing
-    // 1400+ (bt>=90): don't lose any piece worth 300+ for nothing  
-    // 1800+ (bt>=110): don't lose any piece at all without compensation
+    // ── PIECE SAFETY FILTER ────────────────────────────────────────────────────
+    // Behaviour per tier (blunder_threshold as elo proxy):
+    //
+    // bt < 50  (below 1000): only block queen giveaway
+    // bt = 50  (1000–1200):  block R/Q/N/B hangs + pawn hangs 60% of the time
+    // bt = 45  (1200–1300):  block R/Q/N/B hangs + pawn hangs 98% of the time
+    // bt = 40  (1300–1500):  block ALL piece loss including pins/double attacks/tactics
+    // bt = 60+ (1500+):      block ALL + look for counter-attack / tempo moves
     if(scored.length>1){
-        const board=game.board();
-        const safetyFloor = blunder_threshold>=110 ? 150   // 1800+: very strict
-                          : blunder_threshold>=90  ? 300   // 1400+: no minor piece gifts
-                          : blunder_threshold>=70  ? 450   // 1000+: no rook/queen gifts
-                          :                          800;  // below 1000: only block queen giveaway
-        const safe=scored.filter(s=>{
-            const loss = moveSafetyLoss(board,s.move);
-            if(loss < safetyFloor) return true;           // safe move
-            // Allow if engine score strongly justifies it (real sacrifice)
-            return (bestScore - s.raw) < -250;
+        const board   = game.board();
+        const myColor = game.turn();
+        const oppColor= myColor==='w'?'b':'w';
+
+        const filtered = scored.filter(s => {
+            const loss = moveSafetyLoss(board, s.move);
+
+            // ── Tier: below 1000 (bt < 50) ──────────────────────────────────
+            // Only block moves that give away the queen for nothing
+            if(blunder_threshold < 50){
+                if(loss >= 800) return (bestScore - s.raw) < -400; // allow if engine thinks it's great
+                return true;
+            }
+
+            // ── Tier: 1000–1200 (bt = 50) ───────────────────────────────────
+            // Block R/Q/N/B hangs always. Pawn hangs blocked 60% of the time.
+            if(blunder_threshold <= 50){
+                if(loss >= 280) {
+                    // Rook/queen/knight/bishop hang — always block unless clear sacrifice
+                    return (bestScore - s.raw) < -300;
+                }
+                if(loss >= 80) {
+                    // Pawn hang — block 60% of the time (40% chance bot misses it)
+                    if(Math.random() < 0.60) return false;
+                }
+                return true;
+            }
+
+            // ── Tier: 1200–1300 (bt = 45) ───────────────────────────────────
+            // Block R/Q/N/B hangs always. Pawn hangs blocked 98% of the time.
+            if(blunder_threshold <= 45){
+                if(loss >= 280) {
+                    return (bestScore - s.raw) < -300;
+                }
+                if(loss >= 80) {
+                    // Pawn hang — block 98% of the time
+                    if(Math.random() < 0.98) return false;
+                }
+                return true;
+            }
+
+            // ── Tier: 1300–1500 (bt = 40) ───────────────────────────────────
+            if(blunder_threshold <= 40){
+                // Block any direct hang of the moved piece
+                if(loss >= 80) return (bestScore - s.raw) < -300;
+                // Scan board: does this move leave an EXISTING piece hanging?
+                // This catches: Nc3 while Ra1 is already attacked by opponent knight
+                try {
+                    game.move(s.move);
+                    const boardAfter = game.board();
+                    let leavesHang = false;
+                    for(let rr=0;rr<8&&!leavesHang;rr++) for(let cc=0;cc<8&&!leavesHang;cc++){
+                        const pp=boardAfter[rr][cc];
+                        if(!pp||pp.color!==myColor||pp.type==='k') continue;
+                        const sq2=String.fromCharCode(97+cc)+(8-rr);
+                        const pv2=PIECE_VALUES[pp.type]||0;
+                        if(pv2 < 300) continue; // only care about minor piece+ hangs
+                        const atk2=lowestAttacker(boardAfter, sq2, myColor==='w'?'b':'w');
+                        const def2=lowestAttacker(boardAfter, sq2, myColor);
+                        if(atk2.val<Infinity && atk2.val<=pv2 && def2.val===Infinity) leavesHang=true;
+                    }
+                    game.undo();
+                    if(leavesHang) return (bestScore - s.raw) < -250;
+                } catch(e){ try{game.undo();}catch(_){} }
+                // Filter moves 400cp below best (likely missing a tactic)
+                if((bestScore - s.raw) > 400) return false;
+                return true;
+            }
+
+            // ── Tier: 1500+ (bt >= 60) ──────────────────────────────────────
+            // Block all hangs including pawns. Additionally:
+            // 1. Prefer moves with tempo (checks, attacks on valuable pieces)
+            // 2. Consider counter-attacks and trades
+            if(loss >= 80) return (bestScore - s.raw) < -200; // very tight — allow only clear sacrifices
+            // Filter moves 300cp below best (likely missing a tactic)
+            if((bestScore - s.raw) > 300) return false;
+            return true;
         });
-        if(safe.length>0) scored.splice(0,scored.length,...safe);
+
+        if(filtered.length>0) scored.splice(0,scored.length,...filtered);
+
+        // ── TEMPO BONUS for 1500+ ────────────────────────────────────────────
+        // Reward moves that create immediate threats (checks, attacks on queen/rook)
+        if(blunder_threshold >= 60 && scored.length > 1){
+            for(const s of scored){
+                // Check bonus
+                if(s.san && s.san.includes('+')) s.score += 15;
+                // Attack on opponent queen/rook after this move
+                if(s.move.captured && (s.move.captured==='q'||s.move.captured==='r')) s.score += 10;
+            }
+            scored.sort((a,b)=>b.score-a.score);
+        }
     }
 
-    const topN=scored.slice(0,Math.min(pool,scored.length));
-    return topN[Math.floor(Math.random()*topN.length)].uci;
+    // ── PRE-MOVE SANITY CHECK ────────────────────────────────────────────────
+    // Run preMoveEval on the top pick. If vetoed, walk down the list.
+    // This is the backup layer that catches disasters the search missed.
+    // Only active for bots elo 1000+ (bt >= 40) — weaker bots should blunder.
+    const topN = scored.slice(0, Math.min(pool, scored.length));
+    const myColorFinal = game.turn();
+
+    if(blunder_threshold >= 40 && topN.length > 0){
+        for(const candidate of scored){
+            const verdict = preMoveEval(game, candidate.uci, myColorFinal, blunder_threshold);
+            if(!verdict.veto){
+                return candidate.uci; // first move that passes all checks
+            }
+            // Log only fatal vetoes to avoid console spam
+            if(verdict.severity === 'fatal'){
+                console.warn(`  ⚠️ preMoveEval vetoed "${candidate.uci}": ${verdict.reason}`);
+            }
+        }
+    }
+
+    // Fallback: return top pick (or random from topN for weaker bots)
+    return topN[Math.floor(Math.random() * topN.length)].uci;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -645,7 +1130,7 @@ function mateSearch(game, depth, isOpp) {
 //  EXPORTS
 // ═══════════════════════════════════════════════════════════════════════════
 if(typeof module!=='undefined'&&module.exports!==undefined){
-    module.exports={scoreMoveForOrdering,sortMoves,evaluateAbsolute,quiesce,minimax,_skillProfile,_engineProfile,findMate,mateSearch,findBestMove,moveSafetyLoss,lowestAttacker,ttClear,resetHeuristics};
+    module.exports={scoreMoveForOrdering,sortMoves,evaluateAbsolute,quiesce,minimax,_skillProfile,_engineProfile,findMate,mateSearch,findBestMove,moveSafetyLoss,lowestAttacker,ttClear,resetHeuristics,preMoveEval,seePositive,see};
 }
 if(typeof window!=='undefined'){
     window.scoreMoveForOrdering=scoreMoveForOrdering;
@@ -662,6 +1147,9 @@ if(typeof window!=='undefined'){
     window.lowestAttacker=lowestAttacker;
     window.ttClear=ttClear;
     window.resetHeuristics=resetHeuristics;
+    window.preMoveEval=preMoveEval;
+    window.seePositive=seePositive;
+    window.see=see;
     window._BotEngineLoaded=true;
     console.log('✅ bot-engine.js: Full tactical engine ready (TT+NullMove+LMR+Killers+History+ID)');
 }

@@ -121,6 +121,95 @@ function querySF(sf,fen,elo){
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+//  WEB WORKER POOL  — runs findBestMove off the main thread
+//  One shared worker handles all built-in engine calls.
+//  This is what prevents the page from freezing during deep searches.
+// ═══════════════════════════════════════════════════════════════════════════
+let _worker      = null;   // the Web Worker instance
+let _workerReady = false;  // true once worker sends 'ready'
+let _workerPending = {};   // id → { resolve, reject, timer }
+let _workerMsgId = 0;
+
+function getWorker() {
+    if (_worker && _workerReady) return Promise.resolve(_worker);
+
+    return new Promise((resolve) => {
+        // If already loading, wait
+        if (_worker && !_workerReady) {
+            const waitInterval = setInterval(() => {
+                if (_workerReady) { clearInterval(waitInterval); resolve(_worker); }
+            }, 50);
+            return;
+        }
+
+        try {
+            _worker = new Worker('./bot-worker.js');
+
+            _worker.onmessage = (e) => {
+                const { type, move, id, message } = e.data;
+
+                if (type === 'ready') {
+                    _workerReady = true;
+                    console.log('✅ bot-worker.js ready');
+                    resolve(_worker);
+                    return;
+                }
+
+                if (type === 'move' || type === 'error') {
+                    const pending = _workerPending[id];
+                    if (!pending) return;
+                    clearTimeout(pending.timer);
+                    delete _workerPending[id];
+                    if (type === 'error') {
+                        console.warn('Worker error:', message);
+                        pending.resolve(null); // fall back gracefully
+                    } else {
+                        pending.resolve(move);
+                    }
+                }
+            };
+
+            _worker.onerror = (e) => {
+                console.warn('⚠️ Web Worker failed:', e.message);
+                _worker = null; _workerReady = false;
+                // Reject all pending
+                for (const id in _workerPending) {
+                    const p = _workerPending[id];
+                    clearTimeout(p.timer);
+                    p.resolve(null);
+                }
+                _workerPending = {};
+                resolve(null); // signal worker unavailable
+            };
+
+        } catch(e) {
+            console.warn('⚠️ Workers not supported:', e.message);
+            _worker = null;
+            resolve(null);
+        }
+    });
+}
+
+// Ask the worker for a move — returns a Promise<uci_string|null>
+function workerGetMove(fen, elo, timeoutMs) {
+    return new Promise(async (resolve) => {
+        const worker = await getWorker();
+        if (!worker) { resolve(null); return; } // worker unavailable — caller will fallback
+
+        const id = ++_workerMsgId;
+        const timer = setTimeout(() => {
+            // Worker took too long — resolve null so caller falls back
+            delete _workerPending[id];
+            console.warn(`⏱ Worker timeout for elo=${elo}`);
+            resolve(null);
+        }, (timeoutMs || 3000) + 500); // generous timeout
+
+        _workerPending[id] = { resolve, timer };
+        worker.postMessage({ type: 'move', fen, elo, id });
+    });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 //  OPENING BOOK
 // ═══════════════════════════════════════════════════════════════════════════
 function tryBook(game,elo){
@@ -174,8 +263,9 @@ class ChessBot{
         const book=tryBook(game,this.elo);
         if(book){console.log(`  📖 [${this.name}: ${book}]`);return book;}
 
-        // 2. Stockfish (for Engine bots or when available)
-        if(this.isEngine||this.elo>=1200){
+        // 2. Stockfish (for Engine bots ≥1600 — below that our built-in engine
+        //    runs depth 4 with quiescence which is exactly what 1000-1400 needs)
+        if(this.isEngine||this.elo>=1600){
             try{
                 const sf=await loadStockfish();
                 if(sf){
@@ -188,8 +278,26 @@ class ChessBot{
             }catch(e){console.warn(`SF error for ${this.name}:`,e.message);}
         }
 
-        // 3. Built-in engine (for weak bots or SF fallback)
+        // 3. Built-in engine via Web Worker (never blocks the main thread)
+        try {
+            const timeoutMs = (this.profile && this.profile.timeMs) ? this.profile.timeMs + 500 : 2000;
+            const workerMove = await workerGetMove(fen, this.elo, timeoutMs);
+            if (workerMove) {
+                // Validate
+                const mo = game.move({ from: workerMove.slice(0,2), to: workerMove.slice(2,4), promotion: workerMove[4]||'q' });
+                if (mo) {
+                    game.undo();
+                    console.log(`  🔧 [${this.name} worker: ${mo.san}]`);
+                    return workerMove;
+                }
+            }
+        } catch(e) {
+            console.warn('Worker move failed:', e.message);
+        }
+
+        // 4. Last resort: direct findBestMove on main thread (only if worker unavailable)
         if(typeof findBestMove!=='undefined'){
+            console.warn(`  ⚠️ [${this.name}] falling back to main-thread engine`);
             const move=findBestMove(game,this.profile);
             if(move)return move;
         }

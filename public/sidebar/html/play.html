@@ -1,26 +1,33 @@
 <!doctype html>
 <html lang="en">
 <head>
-	<meta charset="utf-8" />
-	<meta name="viewport" content="width=device-width,initial-scale=1" />
-	<title>Play — Royal Chess Arena</title>
-	<link rel="stylesheet" href="../../css/home.css">
-	<link rel="stylesheet" href="../css/play.css">
-	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-	<!-- Google tag (gtag.js) -->
-	<script async src="https://www.googletagmanager.com/gtag/js?id=G-WKWFNGL70V"></script>
-	<script>
-	window.dataLayer = window.dataLayer || [];
-	function gtag(){dataLayer.push(arguments);}
-	gtag('js', new Date());
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Play — Royal Chess Arena</title>
 
-	gtag('config', 'G-WKWFNGL70V');
-	</script>
+  <!-- Core styles -->
+  <link rel="stylesheet" href="../../css/home.css">
+  <link rel="stylesheet" href="../css/play.css">
+
+  <!-- Icons -->
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+  <!-- Google tag (gtag.js) -->
+  <script async
+          src="https://www.googletagmanager.com/gtag/js?id=G-WKWFNGL70V"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-WKWFNGL70V');
+  </script>
 </head>
 <body>
-	<div class="play-shell">
-		<aside class="sidebar">
-  <div class="brand">
+  <div class="play-shell">
+    <!-- Left sidebar -->
+    <aside class="sidebar">
+      <div class="brand">
         <span>Royal Chess Arena</span>
       </div>
 
@@ -29,10 +36,13 @@
         <div class="user-info">
           <div id="sidebar-name" class="user-name">Player</div>
           <div id="sidebar-status" class="user-status">Beginner</div>
-          <!-- user-stats: keep DOM present (hidden by CSS) so scripts that expect these IDs won't error -->
           <div class="user-stats" aria-hidden="true">
-            <div class="user-rating">Rating: <span id="sidebar-rating">1200</span></div>
-            <div class="games-stats">Games: <span id="sidebar-games">0</span></div>
+            <div class="user-rating">
+              Rating: <span id="sidebar-rating">1200</span>
+            </div>
+            <div class="games-stats">
+              Games: <span id="sidebar-games">0</span>
+            </div>
           </div>
           <div class="user-stars">
             <div class="stars hidden" id="sidebar-stars">
@@ -47,150 +57,233 @@
       </div>
 
       <nav class="nav">
-        <a href="../../welcome.html" class="nav-item"><i class="fas fa-home"></i> Home</a>
-        <a href="./play.html" class="nav-item active"><i class="fas fa-chess"></i> Play</a>
-        <a href="puzzles.html" class="nav-item"><i class="fas fa-puzzle-piece"></i> Puzzles</a>
-        <a href="#" class="nav-item"><i class="fas fa-book-open"></i> Learn</a>
-        <a href="#" class="nav-item"><i class="fas fa-tv"></i> Watch</a>
-        <a href="#" class="nav-item"><i class="fas fa-newspaper"></i> News</a>
-        <a href="#" class="nav-item"><i class="fas fa-users"></i> Social</a>
-        <a href="#" class="nav-item"><i class="fas fa-ellipsis-h"></i> More</a>
-        <a href="#" class="nav-item highlight"><i class="fas fa-gem"></i>Memberships</a>
+        <a href="../../welcome.html" class="nav-item">
+          <i class="fas fa-home"></i> Home
+        </a>
+        <a href="./play.html" class="nav-item active">
+          <i class="fas fa-chess"></i> Play
+        </a>
+        <a href="puzzles.html" class="nav-item">
+          <i class="fas fa-puzzle-piece"></i> Puzzles
+        </a>
+        <a href="#" class="nav-item">
+          <i class="fas fa-book-open"></i> Learn
+        </a>
+        <a href="#" class="nav-item">
+          <i class="fas fa-tv"></i> Watch
+        </a>
+        <a href="#" class="nav-item">
+          <i class="fas fa-newspaper"></i> News
+        </a>
+        <a href="#" class="nav-item">
+          <i class="fas fa-users"></i> Social
+        </a>
+        <a href="#" class="nav-item">
+          <i class="fas fa-ellipsis-h"></i> More
+        </a>
+        <a href="#" class="nav-item highlight">
+          <i class="fas fa-gem"></i> Memberships
+        </a>
       </nav>
 
       <div class="sidebar-search">
         <input type="search" placeholder="Search" aria-label="Search" />
       </div>
 
-  <div class="sidebar-bottom">
-  <a href="#" id="theme-toggle" class="nav-item small"><i class="fas fa-adjust"></i> Light UI</a>
-  <a href="#" id="sidebar-collapse" class="nav-item small"><i class="fas fa-compress"></i> Collapse</a>
-        <a href="/settings" class="nav-item small"><i class="fas fa-cog"></i> Settings</a>
-        <a href="/support" class="nav-item small"><i class="fas fa-life-ring"></i> Support</a>
+      <div class="sidebar-bottom">
+        <a href="#" id="theme-toggle" class="nav-item small">
+          <i class="fas fa-adjust"></i> Light UI
+        </a>
+        <a href="#" id="sidebar-collapse" class="nav-item small">
+          <i class="fas fa-compress"></i> Collapse
+        </a>
+        <a href="/settings" class="nav-item small">
+          <i class="fas fa-cog"></i> Settings
+        </a>
+        <a href="/support" class="nav-item small">
+          <i class="fas fa-life-ring"></i> Support
+        </a>
         <div class="separator"></div>
-        <a href="/logout?returnTo=/sidebar/html/play.html" class="nav-item small logout"><i class="fas fa-sign-out-alt"></i> Log Out</a>
+        <a href="/logout?returnTo=/sidebar/html/play.html"
+           class="nav-item small logout">
+          <i class="fas fa-sign-out-alt"></i> Log Out
+        </a>
       </div>
-
     </aside>
 
-		<aside class="side-extra">
-			<div class="side-extra-panel">
-				<h3>Try Something Else</h3>
-				<ul class="try-list">
-					<li><a href="../Chess-Bots/bots.html"><i class="fas fa-robot"></i> Play against chess bots<span class="muted"> — quick matches vs AI</span></a></li>
-					<li><a href="/review"><i class="fas fa-search"></i> Game Review<span class="muted"> — review moves and mistakes</span></a></li>
-					<li><a href="/improve"><i class="fas fa-brain"></i> Improve Game with AI<span class="muted"> — available for Advance+ players</span></a></li>
-					<li><a href="/puzzles"><i class="fas fa-puzzle-piece"></i> Try puzzles<span class="muted"> — tactics & training</span></a></li>
-					<li><a href="/puzzles"><i class="fas fa-solid fa-chess-board"></i> Different Chess Variants<span class="muted"> — try some types of chess</span></a></li>
-				</ul>
-			</div>
-		</aside>
+    <!-- Right “try something else” column -->
+    <aside class="side-extra">
+      <div class="side-extra-panel">
+        <h3>Try Something Else</h3>
+        <ul class="try-list">
+          <li>
+            <a href="../Chess-Bots/bots.html">
+              <i class="fas fa-robot"></i>
+              Play against chess bots
+              <span class="muted"> — quick matches vs AI</span>
+            </a>
+          </li>
+          <li>
+            <a href="/review">
+              <i class="fas fa-search"></i>
+              Game Review
+              <span class="muted"> — review moves and mistakes</span>
+            </a>
+          </li>
+          <li>
+            <a href="/improve">
+              <i class="fas fa-brain"></i>
+              Improve Game with AI
+              <span class="muted">
+                — available for Advance+ players
+              </span>
+            </a>
+          </li>
+          <li>
+            <a href="/puzzles">
+              <i class="fas fa-puzzle-piece"></i>
+              Try puzzles
+              <span class="muted"> — tactics &amp; training</span>
+            </a>
+          </li>
+          <li>
+            <a href="/puzzles">
+              <i class="fas fa-solid fa-chess-board"></i>
+              Different Chess Variants
+              <span class="muted"> — try some types of chess</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </aside>
 
-		<main class="board-area">
-			<header class="board-top">
-			  <div class="site-title">Royal Chess Arena</div>
-			  <div class="user-area" id="user-area">
-			    <div id="user-avatar" class="avatar">&nbsp;</div>
-			    <div id="user-name" class="user-name">&nbsp;</div>
-			    <a id="top-logout" class="btn logout-top" href="/logout?returnTo=/sidebar/html/play.html">Log Out</a>
-			  </div>
-			</header>
+    <!-- Main board area -->
+    <main class="board-area">
+      <header class="board-top">
+        <div class="site-title">Royal Chess Arena</div>
+        <div class="user-area" id="user-area">
+          <div id="user-avatar" class="avatar">&nbsp;</div>
+          <div id="user-name" class="user-name">&nbsp;</div>
+          <a id="top-logout"
+             class="btn logout-top"
+             href="/logout?returnTo=/sidebar/html/play.html">
+            Log Out
+          </a>
+        </div>
+      </header>
 
-			<section class="board-wrap">
-				<div class="chessboard-wrap">
-				  <div class="chessboard" id="chessboard" aria-label="Chess board">
-					<!-- squares generated by JS -->
-				  </div>
-				</div>
-			</section>
+      <section class="board-wrap">
+        <div class="chessboard-wrap">
+          <div class="chessboard"
+               id="chessboard"
+               aria-label="Chess board">
+            <!-- squares generated by JS -->
+          </div>
+        </div>
+      </section>
 
-			<div id="play-status" class="status-message" style="margin-top:12px;display:none"></div>
-		</main>
+      <div id="play-status"
+           class="status-message"
+           style="margin-top:12px;display:none"></div>
+    </main>
 
-		<aside class="controls">
-			<div class="controls-panel">
-				<h3>New Game</h3>
-				<div class="time-control-section">
-					<div class="control-row">
-						<label>Time Control</label>
-						<div class="time-categories">
-							<div class="category bullet-category">
-								<div class="category-title">Bullet</div>
-								<div class="time-options">
-									<button class="time-btn" data-time="1 min">1 min</button>
-									<button class="time-btn" data-time="1|1">1|1</button>
-									<button class="time-btn" data-time="2|1">2|1</button>
-								</div>
-							</div>
-							<div class="category blitz-category">
-								<div class="category-title">Blitz</div>
-								<div class="time-options">
-									<button class="time-btn" data-time="3 min">3 min</button>
-									<button class="time-btn" data-time="3|2">3|2</button>
-									<button class="time-btn" data-time="5 min">5 min</button>
-								</div>
-							</div>
-							<div class="category rapid-category">
-								<div class="category-title">Rapid</div>
-								<div class="time-options">
-									<button class="time-btn preferred-time" data-time="10 min">10 min</button>
-									<button class="time-btn" data-time="15|10">15|10</button>
-									<button class="time-btn" data-time="30 min">30 min</button>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
-				<div class="actions">
-					<button id="start-game" class="btn start">Start Game</button>
-				</div>
-				<div id="game-actions" class="game-actions" style="display:none;">
-					<button id="resign-btn" class="btn btn-danger">Resign</button>
-					<button id="offer-draw-btn" class="btn btn-secondary">Offer Draw</button>
-				</div>
+    <!-- Controls on the right -->
+    <aside class="controls">
+      <div class="controls-panel">
+        <h3>New Game</h3>
 
-				<div class="extra-actions">
-					<button class="btn">Custom Challenge</button>
-					<button class="btn">Play a Friend</button>
-					<button class="btn">Tournaments</button>
-					<button id="pass-play" class="btn">Pass &amp; Play</button>
-				</div>
-			</div>
-		</aside>
+        <div class="time-control-section">
+          <div class="control-row">
+            <label>Time Control</label>
+            <div class="time-categories">
+              <div class="category bullet-category">
+                <div class="category-title">Bullet</div>
+                <div class="time-options">
+                  <button class="time-btn" data-time="1 min">1 min</button>
+                  <button class="time-btn" data-time="1|1">1|1</button>
+                  <button class="time-btn" data-time="2|1">2|1</button>
+                </div>
+              </div>
+              <div class="category blitz-category">
+                <div class="category-title">Blitz</div>
+                <div class="time-options">
+                  <button class="time-btn" data-time="3 min">3 min</button>
+                  <button class="time-btn" data-time="3|2">3|2</button>
+                  <button class="time-btn" data-time="5 min">5 min</button>
+                </div>
+              </div>
+              <div class="category rapid-category">
+                <div class="category-title">Rapid</div>
+                <div class="time-options">
+                  <button class="time-btn preferred-time"
+                          data-time="10 min">
+                    10 min
+                  </button>
+                  <button class="time-btn" data-time="15|10">15|10</button>
+                  <button class="time-btn" data-time="30 min">30 min</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-		<!-- side-extra moved to left of main (kept here for safety if layout needs reverting) -->
-	</div>
+        <div class="actions">
+          <button id="start-game" class="btn start">Start Game</button>
+        </div>
 
-	<!-- Pawn promotion dialog -->
-	<div id="promotion-dialog" class="promotion-dialog" style="display:none">
-		<div class="promotion-menu">
-			<div class="promotion-title">Choose promotion piece</div>
-			<div class="promotion-pieces">
-				<div class="promotion-piece" data-piece="q">
-					<img src="../../Images/Chesspieces/wQ.png" alt="Queen">
-					<div class="piece-label">Queen</div>
-				</div>
-				<div class="promotion-piece" data-piece="r">
-					<img src="../../Images/Chesspieces/wR.png" alt="Rook">
-					<div class="piece-label">Rook</div>
-				</div>
-				<div class="promotion-piece" data-piece="b">
-					<img src="../../Images/Chesspieces/wB.png" alt="Bishop">
-					<div class="piece-label">Bishop</div>
-				</div>
-				<div class="promotion-piece" data-piece="n">
-					<img src="../../Images/Chesspieces/wN.png" alt="Knight">
-					<div class="piece-label">Knight</div>
-				</div>
-			</div>
-		</div>
-	</div>
+        <div id="game-actions"
+             class="game-actions"
+             style="display:none;">
+          <button id="resign-btn" class="btn btn-danger">Resign</button>
+          <button id="offer-draw-btn"
+                  class="btn btn-secondary">
+            Offer Draw
+          </button>
+        </div>
 
-	<script src="../../js/guest-account.js" defer></script>
-	<script src="../../js/home.js" defer></script>
-	<script type="module" src="../minis/chess.esm.js"></script>
-	<script type="module" src="../js/chess-init.js"></script>
-	<script src="../js/play.js" defer></script>
-	<script type="module" src="../../js/main.js" defer></script>
+        <div class="extra-actions">
+          <button class="btn">Custom Challenge</button>
+          <button class="btn">Play a Friend</button>
+          <button class="btn">Tournaments</button>
+          <button id="pass-play" class="btn">Pass &amp; Play</button>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- Pawn promotion dialog -->
+  <div id="promotion-dialog"
+       class="promotion-dialog"
+       style="display:none">
+    <div class="promotion-menu">
+      <div class="promotion-title">Choose promotion piece</div>
+      <div class="promotion-pieces">
+        <div class="promotion-piece" data-piece="q">
+          <img src="../../Images/Chesspieces/wQ.png" alt="Queen">
+          <div class="piece-label">Queen</div>
+        </div>
+        <div class="promotion-piece" data-piece="r">
+          <img src="../../Images/Chesspieces/wR.png" alt="Rook">
+          <div class="piece-label">Rook</div>
+        </div>
+        <div class="promotion-piece" data-piece="b">
+          <img src="../../Images/Chesspieces/wB.png" alt="Bishop">
+          <div class="piece-label">Bishop</div>
+        </div>
+        <div class="promotion-piece" data-piece="n">
+          <img src="../../Images/Chesspieces/wN.png" alt="Knight">
+          <div class="piece-label">Knight</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="../../js/guest-account.js" defer></script>
+  <script src="../../js/home.js" defer></script>
+  <script type="module" src="../minis/chess.esm.js"></script>
+  <script type="module" src="../js/chess-init.js"></script>
+  <script src="../js/play.js" defer></script>
+  <script type="module" src="../../js/main.js" defer></script>
 </body>
-</html>
+</html>aq
