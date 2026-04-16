@@ -1,4 +1,4 @@
-// =============================================================================
+﻿// =============================================================================
 //  bot-engine.js  —  Royal Chess Arena
 //  Full strength engine for 2800-level bots (all features ON).
 //  Weaker bots degrade gracefully by turning features OFF one by one.
@@ -722,182 +722,91 @@ function _engineProfile(elo) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-//  PRE-MOVE EVALUATOR  — Sanity check before committing to any move
-//  Runs 7 checks on a candidate move and returns a verdict object.
-//  This is a backup layer that catches disasters the main search may miss
-//  due to horizon effects, time limits, or shallow depth.
-//
-//  Called by findBestMove on the selected move before returning it.
-//  If verdict.veto = true, findBestMove picks the next best safe move instead.
+//  PRE-MOVE EVALUATOR  — Lean sanity check on final selected move only
+//  3 fast checks. Trust the engine search for everything else.
+//  Only active for bt >= 40 (elo 1000+).
 // ═══════════════════════════════════════════════════════════════════════════
-
-/**
- * preMoveEval(game, moveUci, myColor, blunderThreshold)
- * Returns: { veto: bool, reason: string, severity: 'fatal'|'bad'|'ok' }
- */
 function preMoveEval(game, moveUci, myColor, blunderThreshold) {
-    if (!moveUci || moveUci.length < 4) return { veto: false, reason: 'invalid move', severity: 'ok' };
+    if (!moveUci || moveUci.length < 4) return { veto: false };
+    if (blunderThreshold < 40) return { veto: false }; // beginner bots: no check
 
-    const from = moveUci.slice(0, 2);
-    const to   = moveUci.slice(2, 4);
+    const from  = moveUci.slice(0,2);
+    const to    = moveUci.slice(2,4);
     const promo = moveUci[4] || null;
 
-    // Parse the move object from legal moves
-    const legal = game.moves({ verbose: true });
-    const moveObj = legal.find(m => m.from === from && m.to === to && (!promo || m.promotion === promo));
-    if (!moveObj) return { veto: true, reason: 'illegal move', severity: 'fatal' };
+    const legal   = game.moves({ verbose: true });
+    const moveObj = legal.find(m => m.from===from && m.to===to && (!promo||m.promotion===promo));
+    if (!moveObj) return { veto: false }; // can't parse — trust the engine
 
-    const board     = game.board();
-    const oppColor  = myColor === 'w' ? 'b' : 'w';
-    const pieceVal  = PIECE_VALUES[moveObj.piece] || 0;
+    const board    = game.board();
+    const oppColor = myColor === 'w' ? 'b' : 'w';
+    const pieceVal = PIECE_VALUES[moveObj.piece] || 0;
 
-    // ── CHECK 1: Does this move walk our piece into an undefended attack? ───
-    // (direct hang — piece moves to attacked square with no defender)
-    {
+    // ── CHECK A: Direct undefended hang ─────────────────────────────────────
+    // Only for pieces worth >= 280cp (minor piece or above)
+    // Skip if this is a capture (SEE handles that) or if engine strongly prefers it
+    if (!moveObj.captured && pieceVal >= 280) {
         const atkOnDest = lowestAttacker(board, to, oppColor);
         if (atkOnDest.val < Infinity) {
             const defOnDest = lowestAttacker(board, to, myColor);
-            const capturedGain = PIECE_VALUES[moveObj.captured] || 0;
-            const netLoss = pieceVal - capturedGain;
-
-            if (defOnDest.val === Infinity && netLoss > 50) {
-                // Completely undefended destination — we lose the piece
-                const severity = netLoss >= 450 ? 'fatal' : netLoss >= 280 ? 'bad' : 'ok';
-                if (severity !== 'ok') {
-                    return { veto: true, reason: `CHECK1: Moves ${moveObj.piece.toUpperCase()} to undefended attacked square ${to}, net loss ~${netLoss}cp`, severity };
-                }
+            // We move there and it's attacked but completely undefended
+            if (defOnDest.val === Infinity) {
+                return { veto: true, reason: `Moves ${moveObj.piece.toUpperCase()} to undefended attacked square`, severity: 'fatal' };
             }
-            if (defOnDest.val < Infinity && atkOnDest.val < defOnDest.val && netLoss > 50) {
-                // Defended but attacked by lower-value piece — losing exchange
-                const severity = netLoss >= 450 ? 'fatal' : 'bad';
-                return { veto: true, reason: `CHECK1: Losing exchange on ${to}, attacker=${atkOnDest.val}cp vs our ${pieceVal}cp piece`, severity };
+            // Attacked by a lower-value piece with no adequate defence
+            if (atkOnDest.val < pieceVal && defOnDest.val >= pieceVal) {
+                return { veto: true, reason: `Losing exchange on ${to}`, severity: 'fatal' };
             }
         }
     }
 
-    // ── CHECK 2: Does this move leave an existing piece hanging? ────────────
-    // (we move away from defending a piece, or opponent now attacks it)
-    {
-        game.move(moveObj);
-        const boardAfter = game.board();
-        let hangingPiece = null;
-
-        for (let r = 0; r < 8; r++) for (let c2 = 0; c2 < 8; c2++) {
-            const p = boardAfter[r][c2];
-            if (!p || p.color !== myColor || p.type === 'k') continue;
-            const sq = String.fromCharCode(97 + c2) + (8 - r);
-            const pv = PIECE_VALUES[p.type] || 0;
-            if (pv < 80) continue; // ignore tiny pawn hangs at check level
-            const atk = lowestAttacker(boardAfter, sq, oppColor);
-            const def = lowestAttacker(boardAfter, sq, myColor);
-            if (atk.val < Infinity && atk.val <= pv && def.val === Infinity) {
-                if (!hangingPiece || pv > hangingPiece.val) {
-                    hangingPiece = { sq, val: pv, type: p.type };
-                }
-            }
-        }
-        game.undo();
-
-        if (hangingPiece) {
-            const severity = hangingPiece.val >= 450 ? 'fatal' : hangingPiece.val >= 280 ? 'bad' : 'ok';
-            if (severity !== 'ok') {
-                return { veto: true, reason: `CHECK2: Move leaves ${hangingPiece.type.toUpperCase()} on ${hangingPiece.sq} hanging (${hangingPiece.val}cp)`, severity };
-            }
-        }
-    }
-
-    // ── CHECK 3: Does this move allow opponent checkmate in 1? ──────────────
-    {
-        game.move(moveObj);
-        const opponentMoves = game.moves({ verbose: true });
-        let mateInOne = false;
-        for (const opm of opponentMoves) {
-            game.move(opm);
-            if (game.in_checkmate && game.in_checkmate()) { mateInOne = true; game.undo(); break; }
-            game.undo();
-        }
-        game.undo();
-        if (mateInOne) {
-            return { veto: true, reason: `CHECK3: Move allows opponent checkmate in 1`, severity: 'fatal' };
-        }
-    }
-
-    // ── CHECK 4: Is this move a promotion to a non-queen piece? (trap) ───────
-    if (promo && promo !== 'q' && promo !== 'Q') {
-        return { veto: false, reason: `CHECK4: Underpromotion to ${promo} — allowed`, severity: 'ok' };
-    }
-
-    // ── CHECK 5: Does this move ignore a promotion threat? ──────────────────
-    // If opponent has a pawn on rank 7 (about to promote), we must address it
-    {
-        const oppPromotionRank = myColor === 'w' ? 1 : 6; // opponent's pawn rank before promotion
-        for (let c2 = 0; c2 < 8; c2++) {
-            const p = board[oppPromotionRank][c2];
-            if (!p || p.type !== 'p' || p.color !== oppColor) continue;
-            // Opponent has a pawn one step from queening
-            const promSq = String.fromCharCode(97 + c2) + (myColor === 'w' ? '8' : '1');
-            // Check: does our move stop this promotion?
+    // ── CHECK B: Does this move allow opponent mate in 1? ───────────────────
+    // Only run at bt >= 60 (elo 1500+) — lower tiers should miss this sometimes
+    if (blunderThreshold >= 60) {
+        try {
             game.move(moveObj);
-            const stillThreatens = game.moves({ verbose: true }).some(m =>
-                m.piece === 'p' && m.promotion && m.to === promSq
-            );
+            const oppMoves = game.moves({ verbose: true });
+            let mateFound  = false;
+            // Only look at checks and queen moves — fast
+            for (const opm of oppMoves) {
+                if (!opm.san.includes('+') && !opm.san.includes('#')) continue;
+                game.move(opm);
+                if (game.in_checkmate()) mateFound = true;
+                game.undo();
+                if (mateFound) break;
+            }
             game.undo();
-            if (stillThreatens) {
-                return { veto: true, reason: `CHECK5: Ignores opponent pawn promoting on ${promSq} next move`, severity: 'fatal' };
-            }
-        }
+            if (mateFound) return { veto: true, reason: 'Allows mate in 1', severity: 'fatal' };
+        } catch(e) { try { game.undo(); } catch(_) {} }
     }
 
-    // ── CHECK 6: Does this move result in a clearly lost material exchange? ──
-    // Use SEE to validate captures
-    if (moveObj.captured) {
-        if (!seePositive(board, moveObj)) {
-            const capturedVal = PIECE_VALUES[moveObj.captured] || 0;
-            const netLoss = pieceVal - capturedVal;
-            if (netLoss > 50) {
-                return { veto: true, reason: `CHECK6: SEE-negative capture on ${to}, captures ${moveObj.captured.toUpperCase()}(${capturedVal}cp) with ${moveObj.piece.toUpperCase()}(${pieceVal}cp)`, severity: netLoss > 280 ? 'fatal' : 'bad' };
-            }
-        }
-    }
-
-    // ── CHECK 7: Back rank trap — does this move seal our king in? ───────────
-    {
-        const kingRow = myColor === 'w' ? 7 : 0;
-        // Find king position
-        let kc2 = -1;
-        for (let c2 = 0; c2 < 8; c2++) {
-            const p = board[kingRow][c2];
-            if (p && p.type === 'k' && p.color === myColor) { kc2 = c2; break; }
-        }
-        if (kc2 >= 0) {
+    // ── CHECK C: Does this move leave a piece we currently own undefended? ──
+    // Only for pieces worth >= 300cp; only at bt >= 45 (elo 1200+)
+    if (blunderThreshold >= 45) {
+        try {
             game.move(moveObj);
-            const boardAfter = game.board();
-            // Count king escape squares after this move
-            let escapes = 0;
-            for (const [dr, dc] of [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]]) {
-                const er = kingRow + dr, ec = kc2 + dc;
-                if (er < 0 || er > 7 || ec < 0 || ec > 7) continue;
-                const ep = boardAfter[er][ec];
-                if (ep && ep.color === myColor) continue;
-                if (!isSquareAttackedBy(boardAfter, String.fromCharCode(97+ec)+(8-er), oppColor)) escapes++;
-            }
-            // Check if opponent now has rook/queen on back rank
-            let backRankThreat = false;
-            for (let c2 = 0; c2 < 8; c2++) {
-                const p = boardAfter[kingRow][c2];
-                if (p && p.color === oppColor && (p.type === 'r' || p.type === 'q')) {
-                    backRankThreat = true; break;
+            const bAfter = game.board();
+            let worstHang = 0;
+            for (let r = 0; r < 8; r++) for (let cc = 0; cc < 8; cc++) {
+                const p = bAfter[r][cc];
+                if (!p || p.color !== myColor || p.type === 'k') continue;
+                const pv = PIECE_VALUES[p.type] || 0;
+                if (pv < 300) continue;
+                const sq = String.fromCharCode(97+cc) + (8-r);
+                const atk = lowestAttacker(bAfter, sq, oppColor);
+                const def = lowestAttacker(bAfter, sq, myColor);
+                if (atk.val < Infinity && atk.val <= pv && def.val === Infinity) {
+                    if (pv > worstHang) worstHang = pv;
                 }
             }
             game.undo();
-
-            if (escapes === 0 && backRankThreat) {
-                return { veto: true, reason: `CHECK7: Move seals king on back rank with 0 escapes and opponent has back rank attacker`, severity: 'fatal' };
+            if (worstHang >= 300) {
+                return { veto: true, reason: `Leaves ${worstHang}cp piece hanging`, severity: worstHang >= 450 ? 'fatal' : 'bad' };
             }
-        }
+        } catch(e) { try { game.undo(); } catch(_) {} }
     }
 
-    return { veto: false, reason: 'all checks passed', severity: 'ok' };
+    return { veto: false };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -922,13 +831,18 @@ function findBestMove(game, profile) {
     if(timeMs >= 500 && opts.useTT){
         const move = iterativeDeepening(game, depth, timeMs, opts);
         if(move){
-            // Pre-move sanity check — catches horizon effect disasters
+            // Quick sanity check on the top move
             const verdict = preMoveEval(game, move, game.turn(), blunder_threshold);
-            if(!verdict.veto){
-                return move;
-            }
-            // Vetoed — log and fall through to direct search for backup
+            if(!verdict.veto) return move;
+            // Vetoed — try second-best move from legal list before falling through
             console.warn(`  ⚠️ preMoveEval vetoed "${move}": ${verdict.reason}`);
+            const allLegal = game.moves({verbose:true});
+            for(const m of allLegal){
+                const uci = m.from+m.to+(m.promotion||'');
+                if(uci === move) continue;
+                const v2 = preMoveEval(game, uci, game.turn(), blunder_threshold);
+                if(!v2.veto) return uci;
+            }
         }
     }
 
@@ -1031,26 +945,8 @@ function findBestMove(game, profile) {
             if(blunder_threshold <= 40){
                 // Block any direct hang of the moved piece
                 if(loss >= 80) return (bestScore - s.raw) < -300;
-                // Scan board: does this move leave an EXISTING piece hanging?
-                // This catches: Nc3 while Ra1 is already attacked by opponent knight
-                try {
-                    game.move(s.move);
-                    const boardAfter = game.board();
-                    let leavesHang = false;
-                    for(let rr=0;rr<8&&!leavesHang;rr++) for(let cc=0;cc<8&&!leavesHang;cc++){
-                        const pp=boardAfter[rr][cc];
-                        if(!pp||pp.color!==myColor||pp.type==='k') continue;
-                        const sq2=String.fromCharCode(97+cc)+(8-rr);
-                        const pv2=PIECE_VALUES[pp.type]||0;
-                        if(pv2 < 300) continue; // only care about minor piece+ hangs
-                        const atk2=lowestAttacker(boardAfter, sq2, myColor==='w'?'b':'w');
-                        const def2=lowestAttacker(boardAfter, sq2, myColor);
-                        if(atk2.val<Infinity && atk2.val<=pv2 && def2.val===Infinity) leavesHang=true;
-                    }
-                    game.undo();
-                    if(leavesHang) return (bestScore - s.raw) < -250;
-                } catch(e){ try{game.undo();}catch(_){} }
-                // Filter moves 400cp below best (likely missing a tactic)
+                // Use engine score as proxy for leaving existing pieces hanging:
+                // if a move scores 400cp below best, the engine already saw the problem
                 if((bestScore - s.raw) > 400) return false;
                 return true;
             }
@@ -1080,27 +976,23 @@ function findBestMove(game, profile) {
         }
     }
 
-    // ── PRE-MOVE SANITY CHECK ────────────────────────────────────────────────
-    // Run preMoveEval on the top pick. If vetoed, walk down the list.
-    // This is the backup layer that catches disasters the search missed.
-    // Only active for bots elo 1000+ (bt >= 40) — weaker bots should blunder.
     const topN = scored.slice(0, Math.min(pool, scored.length));
     const myColorFinal = game.turn();
 
-    if(blunder_threshold >= 40 && topN.length > 0){
-        for(const candidate of scored){
-            const verdict = preMoveEval(game, candidate.uci, myColorFinal, blunder_threshold);
-            if(!verdict.veto){
-                return candidate.uci; // first move that passes all checks
-            }
-            // Log only fatal vetoes to avoid console spam
-            if(verdict.severity === 'fatal'){
-                console.warn(`  ⚠️ preMoveEval vetoed "${candidate.uci}": ${verdict.reason}`);
+    // ── PRE-MOVE SANITY CHECK (direct search path) ──────────────────────────
+    // Check top pick. If vetoed, try next. Max 3 checks to keep it fast.
+    if(blunder_threshold >= 40 && scored.length > 1){
+        for(let ci = 0; ci < Math.min(3, scored.length); ci++){
+            try {
+                const verdict = preMoveEval(game, scored[ci].uci, myColorFinal, blunder_threshold);
+                if(!verdict.veto) return scored[ci].uci;
+            } catch(e) {
+                return scored[ci].uci; // exception → trust the engine score
             }
         }
     }
 
-    // Fallback: return top pick (or random from topN for weaker bots)
+    // Return top pick (or random from topN for weaker bots)
     return topN[Math.floor(Math.random() * topN.length)].uci;
 }
 

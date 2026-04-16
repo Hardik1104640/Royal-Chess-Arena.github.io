@@ -1,13 +1,13 @@
-// =============================================================================
+﻿// =============================================================================
 //  bot-data.js
 //  Pure data: bot roster, piece values, piece-square tables, opening book.
 //  No Chess.js dependency. Load this FIRST.
-//  Load order: bot-data.js → bot-engine.js → bot-backend.js
+//  Load order: bot-data.js â†’ bot-engine.js â†’ bot-backend.js
 // =============================================================================
-console.log('🔄 bot-data.js: Loading...');
+console.log('ðŸ”„ bot-data.js: Loading...');
 try {
 
-// ── ALL 183 BOTS ──────────────────────────────────────────────────────────────
+// â”€â”€ ALL 183 BOTS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const BOTS = [
     { id:1,  name:"Magnus Carlsen",  elo:2882,  category:"Chess GM",  locked:false },
     { id:2,  name:"Garry Kasparov",  elo:2851,  category:"Chess GM",  locked:false },
@@ -402,11 +402,11 @@ const BOTS = [
 ];
 
 
-// ── PIECE VALUES ──────────────────────────────────────────────────────────────
+// â”€â”€ PIECE VALUES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const PIECE_VALUES = { p:100, n:320, b:330, r:500, q:900, k:20000 };
 
-// ── PIECE-SQUARE TABLES (white's perspective, rank 1→8 = index 0→7) ──────────
-// These are CRITICAL for positional play — previously defined but never used!
+// â”€â”€ PIECE-SQUARE TABLES (white's perspective, rank 1â†’8 = index 0â†’7) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// These are CRITICAL for positional play â€” previously defined but never used!
 const PST = {
     p: [
          0,  0,  0,  0,  0,  0,  0,  0,
@@ -482,7 +482,7 @@ const PST = {
     ]
 };
 
-// ── PST LOOKUP ─────────────────────────────────────────────────────────────────
+// â”€â”€ PST LOOKUP â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Returns the piece-square bonus for a piece at a board position
 function getPSTValue(pieceType, color, rank, file, isEndgame) {
     // rank: 0=rank1, 7=rank8  |  file: 0=fileA, 7=fileH
@@ -501,7 +501,7 @@ function getPSTValue(pieceType, color, rank, file, isEndgame) {
     return PST[pieceType] ? PST[pieceType][tableIdx] : 0;
 }
 
-// ── ENDGAME DETECTION ─────────────────────────────────────────────────────────
+// â”€â”€ ENDGAME DETECTION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function isEndgame(board) {
     let queens = 0, minors = 0;
     for (let r = 0; r < 8; r++) {
@@ -515,22 +515,22 @@ function isEndgame(board) {
     return queens === 0 || (queens <= 2 && minors <= 2);
 }
 
-// ── OPENING BOOK ─────────────────────────────────────────────────────────────
+// â”€â”€ OPENING BOOK â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Weighted move table keyed by FEN position prefix (first 3 fields = position + turn).
-// Each entry: [uci_move, weight] — higher weight = more likely to be chosen.
+// Each entry: [uci_move, weight] â€” higher weight = more likely to be chosen.
 // Covers: e4/d4/c4/Nf3 systems, Sicilian, French, Caro, KID, QGD, Italian, Spanish,
 //         London, King's Indian Attack, English, and many sub-lines.
 const OPENING_BOOK = {
-    // ════════════════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     //  START POSITION
-    // ════════════════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w': [
         ['e2e4',12],['d2d4',11],['c2c4',6],['g1f3',5],['g2g3',2],['b2b3',2],['f2f4',1]
     ],
 
-    // ════════════════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     //  1.e4 RESPONSES
-    // ════════════════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b': [
         ['e7e5',12],['c7c5',12],['e7e6',9],['c7c6',8],['d7d5',7],['g8f6',5],['d7d6',4],['g7g6',3]
     ],
@@ -548,7 +548,7 @@ const OPENING_BOOK = {
         ['f1b5',11],['f1c4',10],['d2d4',7],['b1c3',5],['f1e2',3]
     ],
 
-    // ── RUY LOPEZ ────────────────────────────────────────────────────────────
+    // â”€â”€ RUY LOPEZ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // 3.Bb5
     'r1bqkbnr/pppp1ppp/2n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R b': [
         ['a7a6',12],['g8f6',9],['f8c5',6],['d7d6',4],['b7b5',3],['g7g6',3]
@@ -570,7 +570,7 @@ const OPENING_BOOK = {
         ['e8g8',12],['d7d6',7]
     ],
 
-    // ── ITALIAN GAME ─────────────────────────────────────────────────────────
+    // â”€â”€ ITALIAN GAME â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // 3.Bc4
     'r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R b': [
         ['f8c5',12],['g8f6',10],['f8e7',5],['d7d6',4]
@@ -588,7 +588,7 @@ const OPENING_BOOK = {
         ['d2d3',8],['b1c3',8],['d2d4',7],['e1g1',7]
     ],
 
-    // ── SCOTCH GAME ──────────────────────────────────────────────────────────
+    // â”€â”€ SCOTCH GAME â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // 3.d4
     'r1bqkbnr/pppp1ppp/2n5/4p3/3PP3/5N2/PPP2PPP/RNBQKB1R b': [
         ['e5d4',12],['d7d6',4]
@@ -601,24 +601,24 @@ const OPENING_BOOK = {
         ['g8f6',10],['f8c5',9],['d8h4',6]
     ],
 
-    // ── FOUR KNIGHTS ─────────────────────────────────────────────────────────
+    // â”€â”€ FOUR KNIGHTS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     'r1bqkb1r/pppp1ppp/2n2n2/4p3/4P3/2N2N2/PPPP1PPP/R1BQKB1R w': [
         ['f1b5',10],['f1c4',8],['d2d4',6]
     ],
 
-    // ── PETROV DEFENSE ───────────────────────────────────────────────────────
+    // â”€â”€ PETROV DEFENSE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     'rnbqkb1r/pppp1ppp/5n2/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w': [
         ['f3e5',10],['d2d4',8],['b1c3',5]
     ],
 
-    // ── GIUOCO PIANO / EVANS GAMBIT continuation ─────────────────────────────
+    // â”€â”€ GIUOCO PIANO / EVANS GAMBIT continuation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     'r1bqk1nr/pppp1ppp/2n5/2b1p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w': [
         ['c2c3',10],['d2d3',8],['b2b4',5],['e1g1',7]
     ],
 
-    // ════════════════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     //  SICILIAN DEFENSE
-    // ════════════════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // 1.e4 c5 2.Nf3
     'rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w': [
         ['g1f3',12],['b1c3',7],['f2f4',4],['c2c3',3]
@@ -673,9 +673,9 @@ const OPENING_BOOK = {
         ['b8c6',10],['e7e6',9],['g7g6',8],['d7d6',7]
     ],
 
-    // ════════════════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     //  FRENCH DEFENSE
-    // ════════════════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     'rnbqkbnr/pppp1ppp/4p3/8/4P3/8/PPPP1PPP/RNBQKBNR w': [
         ['d2d4',12],['b1c3',5],['b1d2',4],['g1f3',3]
     ],
@@ -703,9 +703,9 @@ const OPENING_BOOK = {
         ['f2f4',10],['g1f3',8],['c1e3',7]
     ],
 
-    // ════════════════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     //  CARO-KANN DEFENSE
-    // ════════════════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     'rnbqkbnr/pp1ppppp/2p5/8/4P3/8/PPPP1PPP/RNBQKBNR w': [
         ['d2d4',12],['b1c3',7],['g1f3',4]
     ],
@@ -729,9 +729,9 @@ const OPENING_BOOK = {
         ['c8f5',12],['e7e6',8],['g7g6',5]
     ],
 
-    // ════════════════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     //  PIRC / MODERN DEFENSE
-    // ════════════════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     'rnbqkbnr/ppp1pppp/3p4/8/4P3/8/PPPP1PPP/RNBQKBNR w': [
         ['d2d4',10],['b1c3',8],['g1f3',7]
     ],
@@ -746,9 +746,9 @@ const OPENING_BOOK = {
         ['f2f4',10],['g1f3',9],['c1e3',8],['f1e2',7]
     ],
 
-    // ════════════════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     //  1.d4 OPENINGS
-    // ════════════════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     'rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b': [
         ['d7d5',12],['g8f6',11],['e7e6',7],['c7c5',7],['g7g6',6],['f7f5',3]
     ],
@@ -790,12 +790,12 @@ const OPENING_BOOK = {
         ['e2e3',10],['c1g5',9],['d1c2',7]
     ],
 
-    // ── QUEEN'S GAMBIT ACCEPTED ───────────────────────────────────────────────
+    // â”€â”€ QUEEN'S GAMBIT ACCEPTED â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     'rnbqkbnr/ppp1pppp/8/8/2pP4/8/PP2PPPP/RNBQKBNR w': [
         ['e2e4',10],['g1f3',9],['e2e3',7]
     ],
 
-    // ── KING'S INDIAN DEFENSE ─────────────────────────────────────────────────
+    // â”€â”€ KING'S INDIAN DEFENSE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     'rnbqkb1r/pppppppp/5n2/8/3P4/8/PPP1PPPP/RNBQKBNR w': [
         ['c2c4',12],['g1f3',9],['c1f4',5],['e2e3',4]
     ],
@@ -818,7 +818,7 @@ const OPENING_BOOK = {
         ['d4d5',10],['c1e3',9],['d1d2',8]
     ],
 
-    // ── NIMZO-INDIAN DEFENSE ─────────────────────────────────────────────────
+    // â”€â”€ NIMZO-INDIAN DEFENSE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     'rnbqkb1r/pppp1ppp/4pn2/8/2PP4/2N5/PP2PPPP/R1BQKBNR b': [
         ['f8b4',12],['d7d5',9],['b7b6',6],['c7c5',5]
     ],
@@ -835,7 +835,7 @@ const OPENING_BOOK = {
         ['f8b4',12],['b4a5',9]
     ],
 
-    // ── QUEEN'S INDIAN DEFENSE ────────────────────────────────────────────────
+    // â”€â”€ QUEEN'S INDIAN DEFENSE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     'rnbqkb1r/p1pppppp/1p3n2/8/2PP4/8/PP2PPPP/RNBQKBNR w': [
         ['b1c3',10],['g1f3',9],['e2e3',7],['g2g3',7]
     ],
@@ -847,7 +847,7 @@ const OPENING_BOOK = {
         ['g2g3',10],['e2e3',9],['b1c3',8]
     ],
 
-    // ── CATALAN OPENING ──────────────────────────────────────────────────────
+    // â”€â”€ CATALAN OPENING â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     'rnbqkb1r/ppp2ppp/4pn2/3p4/2PP4/6P1/PP2PP1P/RNBQKBNR w': [
         ['f1g2',12],['g1f3',10]
     ],
@@ -855,7 +855,7 @@ const OPENING_BOOK = {
         ['f8e7',10],['d5c4',9],['c7c6',7],['b7b6',6]
     ],
 
-    // ── ENGLISH OPENING (1.c4) ────────────────────────────────────────────────
+    // â”€â”€ ENGLISH OPENING (1.c4) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     'rnbqkbnr/pppppppp/8/8/2P5/8/PP1PPPPP/RNBQKBNR b': [
         ['e7e5',12],['c7c5',9],['g8f6',8],['e7e6',6],['g7g6',5],['d7d5',5]
     ],
@@ -876,7 +876,7 @@ const OPENING_BOOK = {
         ['b1c3',12],['g1f3',9],['g2g3',7]
     ],
 
-    // ── RETI OPENING (1.Nf3) ─────────────────────────────────────────────────
+    // â”€â”€ RETI OPENING (1.Nf3) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     'rnbqkbnr/pppppppp/8/8/8/5N2/PPPPPPPP/RNBQKB1R b': [
         ['d7d5',12],['g8f6',10],['c7c5',8],['e7e6',7],['g7g6',5],['b7b6',4]
     ],
@@ -893,7 +893,7 @@ const OPENING_BOOK = {
         ['g8f6',10],['e7e6',9],['c7c5',8],['g7g6',7]
     ],
 
-    // ── LONDON SYSTEM ────────────────────────────────────────────────────────
+    // â”€â”€ LONDON SYSTEM â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     'rnbqkbnr/pppppppp/8/8/3P4/5N2/PPP1PPPP/RNBQKB1R b': [
         ['d7d5',12],['g8f6',10],['e7e6',7],['c7c5',6],['g7g6',5]
     ],
@@ -905,12 +905,12 @@ const OPENING_BOOK = {
         ['e2e3',10],['b1d2',9],['c2c3',8]
     ],
 
-    // ── KING'S INDIAN ATTACK ─────────────────────────────────────────────────
+    // â”€â”€ KING'S INDIAN ATTACK â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     'rnbqkbnr/pppppppp/8/8/8/5NP1/PPPPPP1P/RNBQKB1R b': [
         ['d7d5',10],['e7e5',9],['g8f6',8],['c7c5',7]
     ],
 
-    // ── DUTCH DEFENSE ────────────────────────────────────────────────────────
+    // â”€â”€ DUTCH DEFENSE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     'rnbqkbnr/ppppp1pp/8/5p2/3P4/8/PPP1PPPP/RNBQKBNR w': [
         ['c2c4',10],['g2g3',8],['g1f3',7],['e2e4',6]
     ],
@@ -918,7 +918,7 @@ const OPENING_BOOK = {
         ['g8f6',10],['e7e6',9],['d7d6',7]
     ],
 
-    // ── KING'S GAMBIT ────────────────────────────────────────────────────────
+    // â”€â”€ KING'S GAMBIT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     'rnbqkbnr/pppp1ppp/8/4p3/4PP2/8/PPPP2PP/RNBQKBNR b': [
         ['e5f4',12],['d7d5',8],['f8c5',5]
     ],
@@ -931,19 +931,19 @@ const OPENING_BOOK = {
         ['g1f3',10],['f4e5',8]
     ],
 
-    // ── BIRD'S OPENING ───────────────────────────────────────────────────────
+    // â”€â”€ BIRD'S OPENING â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     'rnbqkbnr/pppppppp/8/8/5P2/8/PPPPP1PP/RNBQKBNR b': [
         ['d7d5',10],['e7e5',9],['g8f6',8],['c7c5',7]
     ],
 
-    // ── POLISH / SOKOLSKY ────────────────────────────────────────────────────
+    // â”€â”€ POLISH / SOKOLSKY â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     'rnbqkbnr/pppppppp/8/8/1P6/8/P1PPPPPP/RNBQKBNR b': [
         ['e7e5',10],['d7d5',9],['g8f6',8],['c7c5',7]
     ],
 
-    // ════════════════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     //  COMMON MIDDLEGAME POSITIONS (move 6-12 continuations)
-    // ════════════════════════════════════════════════════════════════════════
+    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     // After castling kingside (many openings)
     // Spanish after O-O
@@ -978,21 +978,21 @@ const OPENING_BOOK = {
 };
 
 
-// ── LOOKUP OPENING BOOK ───────────────────────────────────────────────────────
+// â”€â”€ LOOKUP OPENING BOOK â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Takes a chess.js game object, returns a UCI move string or null.
 // Uses the board position (first 2 FEN fields) as key, randomly weighted selection.
 function lookupBook(game) {
     try {
-        // ── CRITICAL: Never use book/principles when there is an immediate tactic ──
+        // â”€â”€ CRITICAL: Never use book/principles when there is an immediate tactic â”€â”€
         // Tactics = checkmate in 1, free capture (undefended piece), or being in check
         // If any of these exist, return null so the engine calculates instead.
         const legalMoves = game.moves({ verbose: true });
         if (!legalMoves.length) return null;
 
-        // 1. If in check — engine must calculate, not follow book
+        // 1. If in check â€” engine must calculate, not follow book
         if (game.in_check && game.in_check()) return null;
 
-        // 2. If there is a checkmate in 1 — engine finds it, not book
+        // 2. If there is a checkmate in 1 â€” engine finds it, not book
         for (const m of legalMoves) {
             if (m.san && m.san.includes('#')) return null;
         }
@@ -1002,15 +1002,15 @@ function lookupBook(game) {
             if (!m.captured) continue;
             const vic = (typeof PIECE_VALUES !== 'undefined' ? PIECE_VALUES[m.captured] : {p:100,n:320,b:330,r:500,q:900}[m.captured]) || 0;
             const agg = (typeof PIECE_VALUES !== 'undefined' ? PIECE_VALUES[m.piece]    : {p:100,n:320,b:330,r:500,q:900}[m.piece])    || 0;
-            if (vic > agg) return null; // winning capture available — let engine handle
+            if (vic > agg) return null; // winning capture available â€” let engine handle
         }
 
-        // ── Now safe to use book ──────────────────────────────────────────────
+        // â”€â”€ Now safe to use book â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         const fenParts = game.fen().split(' ');
         const key = fenParts[0] + ' ' + fenParts[1];
         const entry = OPENING_BOOK[key];
         if (entry && entry.length) {
-            // Exact match — weighted random selection
+            // Exact match â€” weighted random selection
             const totalWeight = entry.reduce((s, [, w]) => s + w, 0);
             let rand = Math.random() * totalWeight;
             for (const [move, weight] of entry) {
@@ -1020,15 +1020,15 @@ function lookupBook(game) {
             return entry[0][0];
         }
 
-        // No exact match — use principled opening play
+        // No exact match â€” use principled opening play
         // But only in the first 10 full moves (not 15)
         const fullMove = parseInt(fenParts[5]) || 1;
-        if (fullMove > 10) return null; // past move 10 — let engine calculate freely
+        if (fullMove > 10) return null; // past move 10 â€” let engine calculate freely
         return principledOpeningMove(game);
     } catch(e) { return null; }
 }
 
-// ── PRINCIPLED OPENING FALLBACK ───────────────────────────────────────────────
+// â”€â”€ PRINCIPLED OPENING FALLBACK â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // When no book match, play according to opening principles:
 //   1. Control centre (e4/d4/e5/d5)
 //   2. Develop knights before bishops
@@ -1077,12 +1077,12 @@ function principledOpeningMove(game) {
             const fromR= 8 - parseInt(m.from[1]);
             const fromC= m.from.charCodeAt(0) - 97;
 
-            // ── Castle: very high priority once developed ────────────────────
+            // â”€â”€ Castle: very high priority once developed â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             if (m.san === 'O-O' || m.san === 'O-O-O') {
                 score += unmovedMinors === 0 ? 900 : 500;
             }
 
-            // ── Centre pawn moves ─────────────────────────────────────────────
+            // â”€â”€ Centre pawn moves â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             if (m.piece === 'p') {
                 const isEorD = (toC === 3 || toC === 4); // d or e file
                 if (isEorD) {
@@ -1094,7 +1094,7 @@ function principledOpeningMove(game) {
                 if (!isEorD && halfMove < 10) score -= 200;
             }
 
-            // ── Knight development ────────────────────────────────────────────
+            // â”€â”€ Knight development â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             if (m.piece === 'n' && fromR === backRank) {
                 // Knights to f3/c3 (or f6/c6) get priority
                 if ((toC === 5 && toR === (myColor==='w'?5:2)) ||
@@ -1102,7 +1102,7 @@ function principledOpeningMove(game) {
                 else score += 650;
             }
 
-            // ── Bishop development ────────────────────────────────────────────
+            // â”€â”€ Bishop development â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             if (m.piece === 'b' && fromR === backRank) {
                 // Only after at least one knight is out
                 const knightsOut = legal.filter(l => false).length; // just check board
@@ -1114,18 +1114,18 @@ function principledOpeningMove(game) {
                 score += knightsDev > 0 ? 600 : 300;
             }
 
-            // ── Don't move queen early ────────────────────────────────────────
+            // â”€â”€ Don't move queen early â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             if (m.piece === 'q' && halfMove < 12 && !m.captured) score -= 600;
 
-            // ── Don't move king without castling ─────────────────────────────
+            // â”€â”€ Don't move king without castling â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             if (m.piece === 'k' && m.san !== 'O-O' && m.san !== 'O-O-O') score -= 800;
 
-            // ── Don't move same piece twice (penalise if already moved) ──────
+            // â”€â”€ Don't move same piece twice (penalise if already moved) â”€â”€â”€â”€â”€â”€
             if (movedPieces.has(m.from) && m.piece !== 'p' && m.san !== 'O-O' && m.san !== 'O-O-O') {
                 score -= 300;
             }
 
-            // ── Captures are fine ─────────────────────────────────────────────
+            // â”€â”€ Captures are fine â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             if (m.captured) {
                 const vic = { p:100, n:320, b:330, r:500, q:900 }[m.captured] || 0;
                 const agg = { p:100, n:320, b:330, r:500, q:900 }[m.piece]    || 0;
@@ -1151,7 +1151,7 @@ function principledOpeningMove(game) {
     } catch(e) { return null; }
 }
 
-// ── DEVELOPMENT BONUS (used inside evaluateAbsolute) ─────────────────────────
+// â”€â”€ DEVELOPMENT BONUS (used inside evaluateAbsolute) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Rewards: pieces off back rank, centre pawns moved, castled king
 // Penalises: unmoved minor pieces in opening, queen out too early, blocked centre
 function developmentScore(board, color) {
@@ -1179,8 +1179,8 @@ function developmentScore(board, color) {
             if ((p.type === 'n' || p.type === 'b') && r !== backRank) {
                 movedMinors++;
             }
-            // Rooks on back rank are fine — don't penalise
-            // Queen out too early (on rank 2-5 before minors developed) — handled implicitly
+            // Rooks on back rank are fine â€” don't penalise
+            // Queen out too early (on rank 2-5 before minors developed) â€” handled implicitly
 
             // Centre pawns: reward if moved from starting square
             if (p.type === 'p' && centrePawns.includes(c)) {
@@ -1199,7 +1199,7 @@ function developmentScore(board, color) {
 }
 
 
-// ── EXPORTS ───────────────────────────────────────────────────────────────────
+// â”€â”€ EXPORTS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 if (typeof module !== 'undefined' && module.exports !== undefined) {
     module.exports = {
         BOTS, PIECE_VALUES, PST,
@@ -1218,10 +1218,10 @@ if (typeof window !== 'undefined') {
     window.lookupBook       = lookupBook;
     window.developmentScore = developmentScore;
     window._BotDataLoaded   = true;
-    console.log('✅ bot-data.js: 183 bots + opening book loaded');
+    console.log('âœ… bot-data.js: 183 bots + opening book loaded');
 }
 
 } catch(err) {
-    console.error('🔴 FATAL in bot-data.js:', err.message, err.stack);
+    console.error('ðŸ”´ FATAL in bot-data.js:', err.message, err.stack);
     if (typeof window !== 'undefined') window._BotDataLoaded = false;
 }

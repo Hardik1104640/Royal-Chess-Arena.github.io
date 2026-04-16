@@ -1,20 +1,20 @@
-// =============================================================================
-//  bot-worker.js  —  Royal Chess Arena
+﻿// =============================================================================
+//  bot-worker.js  â€”  Royal Chess Arena
 //  Runs the chess engine in a Web Worker so the main thread never freezes.
 //  The worker loads bot-data.js and bot-engine.js then waits for move requests.
 //
 //  Message protocol:
-//    Main → Worker:  { type:'move', fen, elo, id }
-//    Worker → Main:  { type:'move', move, fen, elo, id }
-//    Worker → Main:  { type:'ready' }
-//    Worker → Main:  { type:'error', message, id }
+//    Main â†’ Worker:  { type:'move', fen, elo, id }
+//    Worker â†’ Main:  { type:'move', move, fen, elo, id }
+//    Worker â†’ Main:  { type:'ready' }
+//    Worker â†’ Main:  { type:'error', message, id }
 // =============================================================================
 
-// ── Load dependencies inside the worker ──────────────────────────────────────
+// â”€â”€ Load dependencies inside the worker â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // importScripts is available in Web Workers
 // Paths are relative to the worker file location (Chess-Bots/)
 try {
-    // Step 1: Load chess.js — try local file first, then CDN
+    // Step 1: Load chess.js â€” try local file first, then CDN
     let chessLoaded = false;
     try {
         importScripts('./chess.min.js');
@@ -42,7 +42,7 @@ try {
     postMessage({ type: 'error', message: 'Worker load failed: ' + e.message, id: null });
 }
 
-// ── Verify globals loaded ─────────────────────────────────────────────────────
+// â”€â”€ Verify globals loaded â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const ready = (typeof Chess !== 'undefined') &&
               (typeof BOTS  !== 'undefined') &&
               (typeof findBestMove !== 'undefined');
@@ -53,7 +53,7 @@ if (ready) {
     postMessage({ type: 'error', message: 'Chess engine globals missing after import', id: null });
 }
 
-// ── Handle move requests ──────────────────────────────────────────────────────
+// â”€â”€ Handle move requests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 self.onmessage = function(e) {
     const { type, fen, elo, id } = e.data;
 
