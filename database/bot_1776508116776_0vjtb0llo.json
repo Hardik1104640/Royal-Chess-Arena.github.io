@@ -1,0 +1,26 @@
+{
+  "id": "bot_1776508116776_0vjtb0llo",
+  "date": "2026-04-18T10:28:36.776Z",
+  "type": "bot",
+  "whitePlayer": "Sophia",
+  "blackPlayer": "Sophia",
+  "opponent": "Sophia",
+  "yourColor": "black",
+  "result": "Loss",
+  "resultReason": "Resignation",
+  "moves": [
+    "e4"
+  ],
+  "pgn": "1. e4",
+  "startFen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+  "endFen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+  "timeControl": "10+0",
+  "duration": 7,
+  "botName": "Sophia",
+  "botRating": 408,
+  "botLevel": "Regular",
+  "botStyle": "Solid defender",
+  "totalMoves": 1,
+  "displayName": "Black vs Sophia",
+  "userEmail": "guest@123.cm"
+}

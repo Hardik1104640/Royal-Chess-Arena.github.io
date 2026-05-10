@@ -1,0 +1,26 @@
+{
+  "id": "bot_1776505471219_im1ttasoz",
+  "date": "2026-04-18T09:44:31.219Z",
+  "type": "bot",
+  "whitePlayer": "Viktor",
+  "blackPlayer": "Viktor",
+  "opponent": "Viktor",
+  "yourColor": "black",
+  "result": "Loss",
+  "resultReason": "Resignation",
+  "moves": [
+    "e4"
+  ],
+  "pgn": "1. e4",
+  "startFen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+  "endFen": "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
+  "timeControl": "10+0",
+  "duration": 9,
+  "botName": "Viktor",
+  "botRating": 400,
+  "botLevel": "Regular",
+  "botStyle": "Aggressive attacker",
+  "totalMoves": 1,
+  "displayName": "Black vs Viktor",
+  "userEmail": "guest@123.cm"
+}

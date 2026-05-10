@@ -346,17 +346,25 @@ const attachPlayButtonListeners = () => {
 
 // ── STOCKFISH LOADER ──────────────────────────────────────────────────────────
 const loadStockfishAsync = (botName) => {
-    if (typeof Stockfish !== 'undefined') return;
+    if (typeof Stockfish !== 'undefined') return;  // Already loaded
+    
     const cdns = [
         './stockfish.js',
         'https://cdn.jsdelivr.net/npm/stockfish.js@10.0.2/stockfish.js',
         'https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js',
     ];
+    
     let tried = 0;
     const tryNext = () => {
-        if (tried >= cdns.length) { console.warn(`⚠️ Stockfish unavailable for "${botName}"`); return; }
+        if (tried >= cdns.length) {
+            console.warn(`⚠️ Stockfish.js not found. Using fallback inline AI for "${botName}" (will work but slower)`);
+            return;
+        }
         const s = document.createElement('script');
-        s.src = cdns[tried++]; s.onload = () => console.log(`✅ Stockfish loaded`); s.onerror = tryNext;
+        s.src = cdns[tried];
+        s.onload = () => console.log(`✅ Stockfish loaded from: ${cdns[tried]}`);
+        s.onerror = () => { tried++; tryNext(); };
+        s.timeout = 5000;  // 5 second timeout per CDN
         document.head.appendChild(s);
     };
     tryNext();
@@ -511,14 +519,15 @@ const playWithBot = (bot, playerColor='white', timeMinutes=10, savedGameData=nul
 
     if (typeof Chess === 'undefined') { alert('Chess library not loaded. Please refresh.'); return; }
 
-    const game      = new Chess();
-    let selectedSq  = null;
-    let movesList   = savedGameData ? [...savedGameData.moves] : [];
-    let whiteTime   = savedGameData ? savedGameData.whiteTime  : timeMinutes * 60;
-    let blackTime   = savedGameData ? savedGameData.blackTime  : timeMinutes * 60;
-    let timerInt    = null;
-    let gameActive  = true;
-    let botThinking = false;  // prevents double bot moves
+    const game          = new Chess();
+    const gameStartTime = Date.now();  // ← CRITICAL: Track game start for duration calculation
+    let selectedSq      = null;
+    let movesList       = savedGameData ? [...savedGameData.moves] : [];
+    let whiteTime       = savedGameData ? savedGameData.whiteTime  : timeMinutes * 60;
+    let blackTime       = savedGameData ? savedGameData.blackTime  : timeMinutes * 60;
+    let timerInt        = null;
+    let gameActive      = true;
+    let botThinking     = false;  // prevents double bot moves
     let isPlayerTurn;
 
     if (savedGameData?.fen) { game.load(savedGameData.fen); isPlayerTurn = (game.turn() === playerColorCode); }
@@ -759,6 +768,52 @@ const playWithBot = (bot, playerColor='white', timeMinutes=10, savedGameData=nul
         if (st) { st.textContent=`${winner} — ${reason}`; st.style.color=winner==='You'?'#22b14c':'#ff6b6b'; }
         const rb = document.getElementById('game-resign-btn');
         if (rb) rb.disabled = true;
+
+        // Determine game result
+        const gameResult = winner === 'You' ? 'Win' : winner === 'Draw' ? 'Draw' : 'Loss';
+        
+        // Create detailed game data for bot games (friendly/practice)
+        const gameData = {
+            id: `bot_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            date: new Date().toISOString(),
+            type: 'bot', // IMPORTANT: Bot games DON'T count toward online rating/win rate
+            
+            // Participants
+            whitePlayer: playerColor === 'w' ? 'You' : bot.name,
+            blackPlayer: playerColor === 'b' ? 'You' : bot.name,
+            opponent: bot.name,
+            yourColor: playerColor === 'w' ? 'white' : 'black',
+            
+            // Result info
+            result: gameResult,
+            resultReason: reason,
+            
+            // Moves and positions for review
+            moves: movesList,
+            pgn: game.pgn(),
+            startFen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+            endFen: game.fen(),
+            
+            // Time info
+            timeControl: '10+0',
+            duration: Math.round((Date.now() - gameStartTime) / 1000),
+            
+            // Bot info
+            botName: bot.name,
+            botRating: bot.rating,
+            botLevel: bot.category || 'Regular',
+            botStyle: bot.style || 'Standard',
+            
+            // Metadata
+            totalMoves: movesList.length,
+            displayName: `${playerColor === 'w' ? 'White' : 'Black'} vs ${bot.name}`
+        };
+        
+        // Call save function if available
+        if (typeof window.saveGameToDatabase === 'function') {
+            window.saveGameToDatabase(gameData);
+            console.log('✅ Bot game saved:', gameData);
+        }
 
         // Non-blocking in-page result overlay (replaces alert() which hangs browser)
         setTimeout(() => {

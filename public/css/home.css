@@ -352,6 +352,84 @@ html,body{height:100%;margin:0;font-family:Segoe UI,Roboto,Arial,sans-serif;back
   transform: translateY(-1px);
 }
 
+/* ────────────────────────────────────────────────────────────
+   GAMES LIST SECTION
+   ──────────────────────────────────────────────────────────── */
+.games-list-section {
+  margin: 40px auto;
+  max-width: 900px;
+  padding: 20px;
+  background: var(--card);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.games-list-title {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0 0 20px 0;
+  color: var(--accent-2);
+}
+
+#games-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.game-entry {
+  padding: 15px;
+  background: var(--panel);
+  border-radius: 6px;
+  border-left: 4px solid var(--accent-2);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.game-entry.bot {
+  border-left-color: #ff9800;
+}
+
+.game-entry.online {
+  border-left-color: #2196f3;
+}
+
+.game-entry div {
+  font-size: 14px;
+  color: var(--text);
+}
+
+.game-entry b {
+  color: var(--accent);
+}
+
+.no-games {
+  padding: 20px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.review-link {
+  display: inline-block;
+  padding: 8px 16px;
+  background: var(--accent-2);
+  color: white;
+  border-radius: 4px;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.review-link:hover {
+  background: var(--accent);
+  transform: translateY(-2px);
+}
+
 @media(max-width:900px){.sidebar{display:none}.tiles{grid-template-columns:repeat(2,1fr)}.stats-row{flex-direction:column}}
 
 /* Tablet & small desktop: 768px - 900px */

@@ -473,6 +473,141 @@ app.get('/whoami', (req,res) => {
   res.json({ email: null });
 });
 
+// Save game endpoint (POST)
+app.post('/api/save-game', requireAuth, (req, res) => {
+  try {
+    const gameData = req.body;
+    if (!gameData || !gameData.id) {
+      return res.status(400).json({ error: 'MISSING_DATA', message: 'Game data or ID missing' });
+    }
+    // Attach user email to the game data
+    const userEmail = req.session.user && req.session.user.email ? req.session.user.email : null;
+    if (!userEmail) {
+      return res.status(401).json({ error: 'NO_USER', message: 'User not authenticated' });
+    }
+    gameData.userEmail = userEmail;
+    const filePath = path.join(__dirname, 'database', `${gameData.id}.json`);
+    fs.writeFile(filePath, JSON.stringify(gameData, null, 2), (err) => {
+      if (err) {
+        console.error('Failed to save game:', err);
+        return res.status(500).json({ error: 'SAVE_FAILED', message: 'Could not save game' });
+      }
+      res.json({ success: true });
+    });
+  } catch (e) {
+    res.status(500).json({ error: 'SERVER_ERROR', message: 'Unexpected error' });
+  }
+});
+
+// List saved games endpoint (GET)
+app.get('/api/list-games', requireAuth, (req, res) => {
+  const dbDir = path.join(__dirname, 'database');
+  const userEmail = req.session.user && req.session.user.email ? req.session.user.email : null;
+  if (!userEmail) {
+    return res.status(401).json({ error: 'NO_USER', message: 'User not authenticated' });
+  }
+  fs.readdir(dbDir, (err, files) => {
+    if (err) {
+      return res.status(500).json({ error: 'LIST_FAILED', message: 'Could not list games' });
+    }
+    const jsonFiles = files.filter(f => f.endsWith('.json'));
+    const games = [];
+    let completed = 0;
+    
+    if (jsonFiles.length === 0) return res.json([]);
+    
+    jsonFiles.forEach(f => {
+      fs.readFile(path.join(dbDir, f), 'utf8', (err, data) => {
+        completed++;
+        if (!err) {
+          try {
+            const game = JSON.parse(data);
+            if (game.userEmail === userEmail) {
+              // Detect game type with multiple checks
+              let gameType = 'online';
+              if (game.type === 'bot' || game.botName || (game.players && game.players[1] && game.players[1].includes('bot'))) {
+                gameType = 'bot';
+              }
+              
+              // Extract opponent with multiple fallbacks
+              let opponentName = 'Unknown';
+              if (game.opponent && game.opponent !== 'Unknown') {
+                opponentName = game.opponent;  // New format: explicit opponent field
+              } else if (game.botName) {
+                opponentName = game.botName;   // Old bot format
+              } else if (game.players && Array.isArray(game.players)) {
+                // Old format: players array like ["You (Black)", "Viktor"]
+                const playerInfo = game.players.find(p => !p.includes('You'));
+                if (playerInfo) {
+                  // Clean up player string
+                  opponentName = playerInfo.replace(/\s*\(.*?\)\s*/g, '').trim();
+                }
+              }
+              
+              games.push({ 
+                id: game.id, 
+                type: gameType,
+                date: game.date,
+                result: game.result,
+                opponent: opponentName || 'Unknown',
+                totalMoves: game.totalMoves,
+                timeControl: game.timeControl,
+                endFen: game.endFen
+              });
+            }
+          } catch (e) {
+            console.error(`Error parsing ${f}:`, e.message);
+          }
+        }
+        
+        // Send response only when all files are processed
+        if (completed === jsonFiles.length) {
+          res.json(games);
+        }
+      });
+    });
+  });
+});
+
+// ─── GET full game data by ID ────────────────────────────────────────────────
+app.get('/api/game-data/:gameId', requireAuth, (req, res) => {
+  const dbDir = path.join(__dirname, 'database');
+  const gameId = req.params.gameId;
+  const userEmail = req.session.user && req.session.user.email ? req.session.user.email : null;
+  
+  if (!userEmail) {
+    return res.status(401).json({ error: 'NOT_AUTH', message: 'User not authenticated' });
+  }
+  
+  if (!gameId || gameId.includes('..') || gameId.includes('/')) {
+    return res.status(400).json({ error: 'INVALID_ID', message: 'Invalid game ID' });
+  }
+  
+  const gamePath = path.join(dbDir, `${gameId}.json`);
+  
+  fs.readFile(gamePath, 'utf8', (err, data) => {
+    if (err) {
+      if (err.code === 'ENOENT') {
+        return res.status(404).json({ error: 'NOT_FOUND', message: 'Game not found' });
+      }
+      return res.status(500).json({ error: 'READ_ERROR', message: 'Could not read game data' });
+    }
+    
+    try {
+      const gameData = JSON.parse(data);
+      
+      // Verify ownership
+      if (gameData.userEmail !== userEmail) {
+        return res.status(403).json({ error: 'FORBIDDEN', message: 'You do not own this game' });
+      }
+      
+      res.json(gameData);
+    } catch (e) {
+      res.status(500).json({ error: 'PARSE_ERROR', message: 'Could not parse game data' });
+    }
+  });
+});
+
 // Try to load SSL certificates for HTTPS, otherwise use HTTP only
 const os = require('os');
 const ifaces = os.networkInterfaces();

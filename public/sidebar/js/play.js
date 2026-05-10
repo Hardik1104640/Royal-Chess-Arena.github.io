@@ -137,6 +137,22 @@ function clearGameState() {
   localStorage.removeItem('chessGameState');
 }
 
+function saveFinishedGame(pgn) {
+  try {
+    const games = JSON.parse(localStorage.getItem('chessGames') || '[]');
+    const gameNum = games.length + 1;
+    games.push({
+      name: `Game ${gameNum}`,
+      pgn: pgn,
+      date: new Date().toISOString()
+    });
+    localStorage.setItem('chessGames', JSON.stringify(games));
+    console.log('[Play] Game saved for review:', pgn.substring(0, 50) + '...');
+  } catch (error) {
+    console.error('[Play] Failed to save game:', error);
+  }
+}
+
 function parseTimeControl(timeStr) {
   if (timeStr.includes('|')) {
     // Format: "1|1" (minutes|increment)
@@ -2365,6 +2381,7 @@ document.addEventListener('DOMContentLoaded', () => {
           status.className = 'status-message info';
         }
         broadcastGameEnd('draw', 'Insufficient material');
+        saveFinishedGame(game.pgn());
         clearGameState();
         setTimeout(() => { showGameEndModal(selectedTimeControl); }, 1500);
       } else if (game.isThreefoldRepetition()) {
@@ -2377,6 +2394,7 @@ document.addEventListener('DOMContentLoaded', () => {
           status.className = 'status-message info';
         }
         broadcastGameEnd('draw', '3-fold repetition');
+        saveFinishedGame(game.pgn());
         clearGameState();
         setTimeout(() => { showGameEndModal(selectedTimeControl); }, 1500);
       } else if (game.isDraw50Moves()) {
@@ -2389,6 +2407,7 @@ document.addEventListener('DOMContentLoaded', () => {
           status.className = 'status-message info';
         }
         broadcastGameEnd('draw', '50-move rule');
+        saveFinishedGame(game.pgn());
         clearGameState();
         setTimeout(() => { showGameEndModal(selectedTimeControl); }, 1500);
       } else if (game.isCheckmate()) {
@@ -2402,6 +2421,7 @@ document.addEventListener('DOMContentLoaded', () => {
           status.className = 'status-message success';
         }
         broadcastGameEnd('checkmate', winner);
+        saveFinishedGame(game.pgn());
         clearGameState();
         setTimeout(() => { showGameEndModal(selectedTimeControl); }, 1500);
       } else if (game.isStalemate()) {
@@ -2414,6 +2434,7 @@ document.addEventListener('DOMContentLoaded', () => {
           status.className = 'status-message info';
         }
         broadcastGameEnd('draw', 'Stalemate');
+        saveFinishedGame(game.pgn());
         clearGameState();
         setTimeout(() => { showGameEndModal(selectedTimeControl); }, 1500);
       } else if (game.isCheck()) {
