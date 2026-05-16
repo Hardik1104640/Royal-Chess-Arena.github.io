@@ -123,6 +123,7 @@ app.use((err, req, res, next) => {
 // static
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/images', express.static(path.join(__dirname, 'Images')));
+app.use('/database', express.static(path.join(__dirname, 'database')));
 
 // Debug middleware
 app.use((req, res, next) => {

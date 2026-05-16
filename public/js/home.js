@@ -347,72 +347,93 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ── Fetch and display user's saved games ──
     const fetchAndDisplayGames = () => {
-        fetch('/api/list-games')
-            .then(r => r.json())
-            .then(games => {
-                const list = document.getElementById('games-list');
+    fetch('/api/list-games')
+        .then(res => {
+            if (!res.ok) {
+                // Server returned 401/403/500 etc — don't parse as JSON
+                console.warn(`⚠️ Games API returned ${res.status} — user may not be logged in.`);
+                return null;
+            }
+            return res.json();
+        })
+        .then(games => {
+            if (!games) {
+                // Auth failed or no data — hide section, show zeros
                 const section = document.getElementById('games-list-section');
-                const gamesPlayedStat = document.getElementById('games-played');
-                const winRateStat = document.getElementById('win-rate');
-                if (!list || !section) return;
-                if (!Array.isArray(games) || games.length === 0) {
-                    section.style.display = 'none';
-                    if (gamesPlayedStat) gamesPlayedStat.textContent = '0';
-                    if (winRateStat) winRateStat.textContent = '0%';
-                    return;
-                }
-                
-                // Separate online and bot games
-                const onlineGames = games.filter(g => g.type === 'online');
-                const botGames = games.filter(g => g.type === 'bot');
-                
-                // Sort all games by date descending
-                const allGames = [...games].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-                
-                section.style.display = '';
-                list.innerHTML = allGames.map(g => {
-                    const gameType = g.type === 'bot' ? '🤖 Bot' : '🌐 Online';
-                    // Determine opponent name with fallback
-                    const opponentName = g.opponent || (g.players && Array.isArray(g.players) ? g.players.join(' vs ') : (g.players || 'N/A'));
-                    return `
-                        <div class="game-entry ${g.type}">
-                            <div><b>Date:</b> ${g.date ? new Date(g.date).toLocaleString() : 'Unknown'}</div>
-                            <div><b>Type:</b> ${gameType}</div>
-                            <div><b>Opponent:</b> ${opponentName}</div>
-                            <div><b>Result:</b> <span style="color: ${g.result === 'Win' ? '#22b14c' : g.result === 'Loss' ? '#ff6b6b' : '#fbbf24'}">${g.result || 'N/A'}</span></div>
-                            ${g.type === 'online' ? `<a class="review-link" href="#" data-game-id="${g.id}">Review</a>` : ''}
-                        </div>
-                    `;
-                }).join('');
-                
-                // Update Games Played - show TOTAL games (both online and bot)
-                if (gamesPlayedStat) gamesPlayedStat.textContent = String(games.length);
-                
-                // Calculate win rate - ONLY for online games
-                if (onlineGames.length > 0) {
-                    const onlineWins = onlineGames.filter(g => g.result === 'Win').length;
-                    const onlineWinRate = Math.round((onlineWins / onlineGames.length) * 100);
-                    if (winRateStat) winRateStat.textContent = `${onlineWinRate}%`;
-                    console.log(`📊 Total Games: ${games.length} | Online: ${onlineGames.length} | Bots: ${botGames.length} | Online Win Rate: ${onlineWinRate}%`);
-                } else {
-                    // No online games yet
-                    if (winRateStat) winRateStat.textContent = '—';
-                    console.log(`📊 Total Games: ${games.length} | Online: 0 | Bots: ${botGames.length} | Win Rate: N/A (no online games)`);
-                }
-            })
-            .catch((err) => {
-                console.error('Error loading games:', err);
-                const list = document.getElementById('games-list');
-                const section = document.getElementById('games-list-section');
-                if (list && section) {
-                    section.style.display = 'none';
-                }
+                if (section) section.style.display = 'none';
                 const gamesPlayedStat = document.getElementById('games-played');
                 const winRateStat = document.getElementById('win-rate');
                 if (gamesPlayedStat) gamesPlayedStat.textContent = '0';
                 if (winRateStat) winRateStat.textContent = '—';
-            });
-    };
+                return;
+            }
+
+            const list = document.getElementById('games-list');
+            const section = document.getElementById('games-list-section');
+            const gamesPlayedStat = document.getElementById('games-played');
+            const winRateStat = document.getElementById('win-rate');
+
+            if (!list || !section) return;
+
+            if (!Array.isArray(games) || games.length === 0) {
+                section.style.display = 'none';
+                if (gamesPlayedStat) gamesPlayedStat.textContent = '0';
+                if (winRateStat) winRateStat.textContent = '0%';
+                return;
+            }
+
+            // Separate online and bot games
+            const onlineGames = games.filter(g => g.type === 'online');
+            const botGames    = games.filter(g => g.type === 'bot');
+
+            // Sort all games by date descending
+            const allGames = [...games].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+
+            section.style.display = '';
+            list.innerHTML = allGames.map(g => {
+                const gameType     = g.type === 'bot' ? '🤖 Bot' : '🌐 Online';
+                const opponentName = g.opponent || (g.players && Array.isArray(g.players)
+                    ? g.players.join(' vs ')
+                    : (g.players || 'N/A'));
+                return `
+                    <div class="game-entry ${g.type}">
+                        <div><b>Date:</b> ${g.date ? new Date(g.date).toLocaleString() : 'Unknown'}</div>
+                        <div><b>Type:</b> ${gameType}</div>
+                        <div><b>Opponent:</b> ${opponentName}</div>
+                        <div><b>Result:</b> <span style="color: ${
+                            g.result === 'Win'  ? '#22b14c' :
+                            g.result === 'Loss' ? '#ff6b6b' : '#fbbf24'
+                        }">${g.result || 'N/A'}</span></div>
+                        ${g.type === 'online' ? `<a class="review-link" href="#" data-game-id="${g.id}">Review</a>` : ''}
+                    </div>
+                `;
+            }).join('');
+
+            // Total games played
+            if (gamesPlayedStat) gamesPlayedStat.textContent = String(games.length);
+
+            // Win rate — online games only
+            if (onlineGames.length > 0) {
+                const onlineWins    = onlineGames.filter(g => g.result === 'Win').length;
+                const onlineWinRate = Math.round((onlineWins / onlineGames.length) * 100);
+                if (winRateStat) winRateStat.textContent = `${onlineWinRate}%`;
+                console.log(`📊 Total: ${games.length} | Online: ${onlineGames.length} | Bots: ${botGames.length} | Win Rate: ${onlineWinRate}%`);
+            } else {
+                if (winRateStat) winRateStat.textContent = '—';
+                console.log(`📊 Total: ${games.length} | Online: 0 | Bots: ${botGames.length} | Win Rate: N/A`);
+            }
+        })
+        .catch(err => {
+            // Network error or JSON parse failure
+            console.warn('Games could not be loaded:', err.message);
+            const section = document.getElementById('games-list-section');
+            if (section) section.style.display = 'none';
+            const gamesPlayedStat = document.getElementById('games-played');
+            const winRateStat     = document.getElementById('win-rate');
+            if (gamesPlayedStat) gamesPlayedStat.textContent = '0';
+            if (winRateStat)     winRateStat.textContent = '—';
+        });
+};
 
     // Check if guest account is active; if so, load profile directly
     setTimeout(() => {

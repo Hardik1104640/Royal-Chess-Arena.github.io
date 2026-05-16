@@ -1,6 +1,61 @@
 ﻿// bot.js — Royal Chess Arena  •  Bot selection + game interface
 // Requires (in load order): chess.js → bot-data.js → bot-engine.js → bot-backend.js
 
+// Helper function to build a proper PGN with headers from game moves
+function buildProperPGN(gameObj, playerColor, bot, result) {
+  try {
+    // Get all moves from the game
+    const tempGame = new Chess();
+    const moves = gameObj.history({ verbose: false });
+    
+    // Replay moves
+    for (const move of moves) {
+      tempGame.move(move, { sloppy: true });
+    }
+    
+    // Build PGN string with proper headers
+    const date = new Date();
+    const dateStr = date.toISOString().split('T')[0].replace(/-/g, '.');
+    const resultStr = result === 'Win' ? '1-0' : result === 'Loss' ? '0-1' : '1/2-1/2';
+    
+    let pgnStr = '';
+    pgnStr += `[Event "Royal Chess Arena"]\n`;
+    pgnStr += `[Site "Royal Chess Arena Bot Game"]\n`;
+    pgnStr += `[Date "${dateStr}"]\n`;
+    pgnStr += `[White "${playerColor === 'w' ? 'You' : bot.name}"]\n`;
+    pgnStr += `[Black "${playerColor === 'b' ? 'You' : bot.name}"]\n`;
+    pgnStr += `[Result "${resultStr}"]\n`;
+    pgnStr += `[WhiteElo "${playerColor === 'w' ? '1200' : bot.rating}"]\n`;
+    pgnStr += `[BlackElo "${playerColor === 'b' ? '1200' : bot.rating}"]\n`;
+    pgnStr += `[TimeControl "10+0"]\n`;
+    pgnStr += `\n`;
+    
+    // Add moves
+    const movePgn = tempGame.pgn();
+    if (movePgn) {
+      // Extract just the moves part (after the headers)
+      const movesStart = movePgn.indexOf('\n\n');
+      if (movesStart !== -1) {
+        pgnStr += movePgn.substring(movesStart + 2);
+      } else {
+        pgnStr += moves.join(' ');
+      }
+    } else {
+      pgnStr += moves.join(' ');
+    }
+    
+    return pgnStr;
+  } catch (error) {
+    console.warn('Failed to build proper PGN:', error);
+    // Fallback: try default PGN
+    try {
+      return gameObj.pgn();
+    } catch (e) {
+      return '';
+    }
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
 
 const REGULAR_STYLES = [
@@ -790,7 +845,7 @@ const playWithBot = (bot, playerColor='white', timeMinutes=10, savedGameData=nul
             
             // Moves and positions for review
             moves: movesList,
-            pgn: game.pgn(),
+            pgn: buildProperPGN(game, playerColor, bot, gameResult),
             startFen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
             endFen: game.fen(),
             
