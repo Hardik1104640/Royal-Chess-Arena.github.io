@@ -5,11 +5,11 @@
 
   // candidate directories (relative to public/index.html)
   const dirs = [
-    '/images/Chesspieces/',  // primary path first - matches our Express route
-    './images/Chesspieces/',
-    '../images/Chesspieces/',
-    './Images/Chesspieces/',
-    '/Images/Chesspieces/'
+    '../../images/Chesspieces/',  // primary path first - matches our Express route
+    '../...images/Chesspieces/',
+    '../../images/Chesspieces/',
+    '../../Images/Chesspieces/',
+    '../../Images/Chesspieces/'
   ];
   
   // Debug which directory we're checking
