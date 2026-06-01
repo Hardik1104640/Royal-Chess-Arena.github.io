@@ -42,7 +42,11 @@ window.getLastPlayedGame = function() {
  */
 window.openGameReview = function(gameId = null) {
   try {
+<<<<<<< HEAD
     let url = '../../review-system/client/public/apps/features/analysis.html';
+=======
+    let url = '/sidebar/html/analysis.html';
+>>>>>>> ff605ed (improvements)
     
     if (gameId) {
       // Pass game ID as URL parameter
@@ -78,6 +82,14 @@ window.addGameReviewButton = function() {
   reviewBtn.className = 'btn btn-primary';
   reviewBtn.textContent = 'Review Game';
   reviewBtn.style.marginLeft = '10px';
+<<<<<<< HEAD
+=======
+  reviewBtn.style.background = 'rgb(58, 160, 255)';
+  reviewBtn.style.color = 'white';
+  reviewBtn.style.border = 'none';
+  reviewBtn.style.borderRadius = '5px';
+  reviewBtn.style.cursor = 'pointer';
+>>>>>>> ff605ed (improvements)
   
   reviewBtn.addEventListener('click', function() {
     window.openGameReview();

@@ -1,3 +1,20 @@
+<<<<<<< HEAD
+=======
+function rememberUserProfile(profile) {
+    if (!profile || !profile.email) return;
+
+    const displayName = profile.displayName || profile.display_name || profile.username;
+    if (!displayName) return;
+
+    localStorage.setItem('userProfile', JSON.stringify({
+        email: profile.email,
+        displayName,
+        username: displayName,
+        guest: false
+    }));
+}
+
+>>>>>>> ff605ed (improvements)
 document.addEventListener('DOMContentLoaded', function() {
     const passwordInput = document.getElementById('signup-password');
     const strengthMeter = document.querySelector('.strength-meter');
@@ -84,6 +101,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 display_name: formData.get('display_name')?.trim()
             };
 
+<<<<<<< HEAD
+=======
+            if (/^guest_\d+$/i.test(formJson.display_name || '')) {
+                showMessage('Display names like guest_1 are reserved for guest accounts. Please choose another name.', 'error');
+                document.getElementById('display-name')?.focus();
+                return;
+            }
+
+>>>>>>> ff605ed (improvements)
             console.log('Sending signup data:', formJson); // Debug log
 
             const response = await fetch('/signup', {
@@ -99,6 +125,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (contentType && contentType.includes('application/json')) {
                 const responseData = await response.json();
                 if (response.ok) {
+<<<<<<< HEAD
                     showMessage('Account created successfully! Redirecting...', 'success');
                     return;
                 } else {
@@ -120,6 +147,19 @@ document.addEventListener('DOMContentLoaded', function() {
                     case 'EMAIL_EXISTS':
                         showMessage('This email is already registered. Please log in.', 'info');
                         // Optionally show login link
+=======
+                    rememberUserProfile({
+                        email: formJson.email,
+                        displayName: responseData.user?.displayName || responseData.user?.display_name || formJson.display_name
+                    });
+                    showMessage('Account created successfully! Redirecting...', 'success');
+                    return;
+                }
+                
+                switch(responseData.error) {
+                    case 'EMAIL_EXISTS':
+                        showMessage('This email is already registered. Please log in.', 'info');
+>>>>>>> ff605ed (improvements)
                         setTimeout(() => {
                             window.location.href = '/login.html';
                         }, 2000);
@@ -136,12 +176,31 @@ document.addEventListener('DOMContentLoaded', function() {
                         showMessage('Display name can only contain letters, numbers, underscores and hyphens.', 'error');
                         break;
                     case 'WEAK_PASSWORD':
+<<<<<<< HEAD
                         showMessage('Password must be at least 8 characters long.', 'error');
                         break;
                     default:
                         showMessage(data.message || 'Failed to sign up. Please try again.', 'error');
                 }
             }
+=======
+                        showMessage('Weak password: password must be at least 8 characters long.', 'error');
+                        passwordInput?.focus();
+                        break;
+                    case 'RESERVED_DISPLAY_NAME':
+                        showMessage(responseData.message || 'Display names like guest_1 are reserved for guest accounts. Please choose another name.', 'error');
+                        document.getElementById('display-name')?.focus();
+                        break;
+                    default:
+                        showMessage(responseData.message || 'Failed to sign up. Please try again.', 'error');
+                }
+                return;
+            }
+
+            const text = await response.text();
+            console.error('Non-JSON response:', text);
+            throw new Error('Server error. Please try again.');
+>>>>>>> ff605ed (improvements)
         } catch (error) {
             console.error('Form submission error:', error);
             if (error.message.includes('display name')) {
@@ -241,6 +300,13 @@ loginForm?.addEventListener('submit', async function(e) {
         if (contentType && contentType.includes('application/json')) {
             const responseData = await response.json();
             if (response.ok) {
+<<<<<<< HEAD
+=======
+                rememberUserProfile({
+                    email: responseData.user?.email || formJson.email,
+                    displayName: responseData.user?.displayName || responseData.user?.display_name
+                });
+>>>>>>> ff605ed (improvements)
                 // Show success message
                 showMessage('Login successful! Redirecting...', 'success');
                 // Wait for 2 seconds before redirecting
@@ -264,4 +330,8 @@ loginForm?.addEventListener('submit', async function(e) {
         submitButton.disabled = false;
         submitButton.innerHTML = originalButtonText;
     }
+<<<<<<< HEAD
 });
+=======
+});
+>>>>>>> ff605ed (improvements)

@@ -45,6 +45,7 @@ const SVG = {
    CLASSIFICATIONS
 ═══════════════════════════════════ */
 const CL = {
+<<<<<<< HEAD
   brilliant: { l:'Brilliant',  c:'#00e5c3', bg:'rgba(0,229,195,.13)',  e:'💎', sym:'!!', d:'is a brilliant move!' },
   critical:  { l:'Critical',   c:'#4fa3e0', bg:'rgba(79,163,224,.11)', e:'🎯', sym:'',   d:'is the only good move' },
   best:      { l:'Best',       c:'#6abf45', bg:'rgba(106,191,69,.11)', e:'✅', sym:'!',  d:'is the best move' },
@@ -56,6 +57,19 @@ const CL = {
   forced:    { l:'Forced',     c:'#7a9e6e', bg:'rgba(122,158,110,.09)',e:'🔒', sym:'',   d:'is forced' },
   theory:    { l:'Theory',     c:'#c49a55', bg:'rgba(196,154,85,.09)', e:'📖', sym:'',   d:'is theory' },
   risky:     { l:'Risky',      c:'#9683c8', bg:'rgba(150,131,200,.1)', e:'⚡', sym:'',   d:'is a risky idea' }
+=======
+  brilliant: { l:'Brilliant',  c:'#00e5c3', bg:'rgba(0,229,195,.13)',  icon:'fa-gem', sym:'!!', d:'is a brilliant move!' },
+  critical:  { l:'Critical',   c:'#4fa3e0', bg:'rgba(79,163,224,.11)', icon:'fa-bullseye', sym:'',   d:'is the only good move' },
+  best:      { l:'Best',       c:'#6abf45', bg:'rgba(106,191,69,.11)', icon:'fa-circle-check', sym:'!',  d:'is the best move' },
+  excellent: { l:'Excellent',  c:'#94d13a', bg:'rgba(148,209,58,.09)', icon:'fa-star', sym:'',   d:'is excellent' },
+  okay:      { l:'Okay',       c:'#7a9e6e', bg:'rgba(122,158,110,.09)', icon:'fa-arrow-right',  sym:'',   d:'is an okay move' },
+  inaccuracy:{ l:'Inaccuracy', c:'#e8c842', bg:'rgba(232,200,66,.11)', icon:'fa-triangle-exclamation',  sym:'?!', d:'is an inaccuracy' },
+  mistake:   { l:'Mistake',    c:'#e07a2a', bg:'rgba(224,122,42,.11)', icon:'fa-circle-xmark', sym:'?',  d:'is a mistake' },
+  blunder:   { l:'Blunder',    c:'#d43030', bg:'rgba(212,48,48,.13)',  icon:'fa-burst', sym:'??', d:'is a blunder' },
+  forced:    { l:'Forced',     c:'#7a9e6e', bg:'rgba(122,158,110,.09)', icon:'fa-lock', sym:'',   d:'is forced' },
+  theory:    { l:'Theory',     c:'#c49a55', bg:'rgba(196,154,85,.09)', icon:'fa-book-open', sym:'',   d:'is theory' },
+  risky:     { l:'Risky',      c:'#9683c8', bg:'rgba(150,131,200,.1)', icon:'fa-bolt', sym:'',   d:'is a risky idea' }
+>>>>>>> ff605ed (improvements)
 };
 
 /* ═══════════════════════════════════
@@ -240,6 +254,23 @@ class EngineManager {
     this._status = onStatus;
     onStatus('sf', 'loading');
     
+<<<<<<< HEAD
+=======
+    const remoteWorkerBlocked = (() => {
+      try { return new URL(ENGINES.sf.url, location.href).origin !== location.origin; }
+      catch(e) { return false; }
+    })();
+    if (remoteWorkerBlocked) {
+      logDebug('Skipping remote Stockfish worker on localhost; using fallback analysis.');
+      this.sfReady = false;
+      this.usingFallback = true;
+      onStatus('sf', 'fallback');
+      onStatus('lc0', 'simulated');
+      onStatus('kd',  'simulated');
+      return;
+    }
+
+>>>>>>> ff605ed (improvements)
     this.sf = new StockfishWrapper(ENGINES.sf.url);
     try {
       logDebug('Initializing Stockfish...');
@@ -337,6 +368,7 @@ class EngineManager {
   }
 
   _simulateSF(fen) {
+<<<<<<< HEAD
     const hash = fen.split('').reduce((a,c)=>a+c.charCodeAt(0),0);
     const cp = ((hash % 300) - 150) + (Math.random()-0.5)*40;
     const moves = ['e4','d4','Nf3','c4','g3','Nc3','e5','d5','c5','Nf6'];
@@ -344,6 +376,42 @@ class EngineManager {
     return {
       lines: [{ ...fake(cp), mpv:1 }, { ...fake(cp*0.7+20), mpv:2 }, { ...fake(cp*0.5+35), mpv:3 }],
       best: moves[Math.floor(Math.random()*moves.length)]
+=======
+    let cp = 0;
+    let moves = ['e2e4','d2d4','g1f3'];
+    try {
+      const game = new Chess(fen);
+      const values = { p:100, n:320, b:330, r:500, q:900, k:0 };
+      const board = game.board();
+      for (let r=0;r<8;r++) {
+        for (let c=0;c<8;c++) {
+          const piece = board[r][c];
+          if (!piece) continue;
+          const center = 14 - (Math.abs(3.5-r) + Math.abs(3.5-c)) * 2;
+          const value = values[piece.type] + center;
+          cp += piece.color === 'w' ? value : -value;
+        }
+      }
+      const legal = game.moves({ verbose:true });
+      moves = legal.slice(0, 8).map(m => m.from + m.to + (m.promotion || ''));
+      const mobility = legal.length * (game.turn() === 'w' ? 2 : -2);
+      cp += mobility;
+    } catch(e) {
+      const hash = fen.split('').reduce((a,c)=>a+c.charCodeAt(0),0);
+      cp = (hash % 180) - 90;
+    }
+    const safeMoves = moves.length ? moves : ['e2e4','d2d4','g1f3'];
+    const fake = (cp2, mpv) => ({
+      type:'cp',
+      score:Math.round(cp2),
+      mpv,
+      depth:12,
+      pv:[safeMoves[(mpv-1)%safeMoves.length], safeMoves[mpv%safeMoves.length]].filter(Boolean)
+    });
+    return {
+      lines: [fake(cp,1), fake(cp-18,2), fake(cp+18,3)],
+      best: safeMoves[0]
+>>>>>>> ff605ed (improvements)
     };
   }
 }
@@ -399,8 +467,15 @@ const App = (() => {
     try {
       await engines.init(onEngStatus);
       logDebug('Engine initialization complete');
+<<<<<<< HEAD
     } catch(e) {
       logError('Engine initialization error', e);
+=======
+      loadSavedGameForReview();
+    } catch(e) {
+      logError('Engine initialization error', e);
+      loadSavedGameForReview();
+>>>>>>> ff605ed (improvements)
     }
   }
 
@@ -512,8 +587,13 @@ const App = (() => {
           const cl=CL[classifs[curIdx]];
           const b2=document.createElement('span');
           b2.className='cmark';
+<<<<<<< HEAD
           b2.style.cssText=`background:${cl.bg};border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:${Math.max(9,cellPx*.20)}px;`;
           b2.textContent=cl.e;
+=======
+          b2.style.cssText=`background:${cl.bg};color:${cl.c};border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:${Math.max(9,cellPx*.20)}px;`;
+          b2.innerHTML=`<i class="fas ${cl.icon}"></i>`;
+>>>>>>> ff605ed (improvements)
           sq.appendChild(b2);
         }
 
@@ -590,7 +670,11 @@ const App = (() => {
     if(curIdx<0){el.textContent='Start';return;}
     const mv=moves[curIdx];if(!mv)return;
     const n=Math.floor(curIdx/2)+1;
+<<<<<<< HEAD
     el.textContent=`${n}. ${mv.color==='w'?'♔':'♚'} ${mv.san}`;
+=======
+    el.textContent=`${n}. ${mv.color==='w'?'White':'Black'} ${mv.san}`;
+>>>>>>> ff605ed (improvements)
   }
 
   /* ── NAVIGATE ─────────────────── */
@@ -695,7 +779,12 @@ const App = (() => {
     const key=classifs[curIdx],cl=CL[key],mv=moves[curIdx],loss=cpLoss[curIdx];
     if(!cl||!mv)return;
     
+<<<<<<< HEAD
     $('cl-icon').textContent=cl.e;
+=======
+    $('cl-icon').innerHTML=`<i class="fas ${cl.icon}"></i>`;
+    $('cl-icon').style.color=cl.c;
+>>>>>>> ff605ed (improvements)
     $('cl-icon').style.background=cl.bg;
     $('cl-icon').style.boxShadow=`0 0 0 2px ${cl.c}44`;
     $('cl-san').textContent=mv.san+(cl.sym?' '+cl.sym:'');
@@ -719,7 +808,11 @@ const App = (() => {
     
     const cpEl=$('cl-cp');
     if(loss!=null){
+<<<<<<< HEAD
       cpEl.textContent=loss>0?`-${(loss/100).toFixed(1)}cp`:(loss<=-5?`+${(Math.abs(loss)/100).toFixed(1)}cp`:'✓ Best');
+=======
+      cpEl.textContent=loss>0?`-${(loss/100).toFixed(1)}cp`:(loss<=-5?`+${(Math.abs(loss)/100).toFixed(1)}cp`:'Best');
+>>>>>>> ff605ed (improvements)
       cpEl.style.display='inline-block';
     } else {cpEl.style.display='none';}
     
@@ -744,6 +837,56 @@ const App = (() => {
   }
 
   /* ── ANALYSIS ─────────────────── */
+<<<<<<< HEAD
+=======
+  function parseGameInput(input){
+    const text=(input||'').trim();
+    if(!text)return {ok:false, error:'Paste a PGN before reviewing.'};
+
+    const pgnGame=new Chess();
+    try {
+      if(pgnGame.load_pgn(text,{sloppy:true}) && pgnGame.history().length){
+        return {ok:true, game:pgnGame};
+      }
+    } catch(e) {
+      logDebug('Native PGN parser failed, trying SAN fallback', e);
+    }
+
+    const sanGame=new Chess();
+    const sanTokens=text
+      .replace(/\r/g,'\n')
+      .replace(/\[[^\]]*\]/g,' ')
+      .replace(/\{[^}]*\}/g,' ')
+      .replace(/\([^)]*\)/g,' ')
+      .replace(/\$\d+/g,' ')
+      .replace(/\d+\.(\.\.)?/g,' ')
+      .split(/\s+/)
+      .map(t=>t.trim())
+      .filter(Boolean)
+      .filter(t=>!['1-0','0-1','1/2-1/2','*'].includes(t));
+
+    if(sanTokens.length){
+      let played=0;
+      for(const token of sanTokens){
+        const clean=token.replace(/[!?]+$/,'');
+        const move=sanGame.move(clean,{sloppy:true});
+        if(!move)break;
+        played++;
+      }
+      if(played>0)return {ok:true, game:sanGame};
+    }
+
+    const fenGame=new Chess();
+    try {
+      if(fenGame.load(text))return {ok:true, game:fenGame};
+    } catch(e) {
+      logDebug('FEN parser failed', e);
+    }
+
+    return {ok:false, error:'Invalid PGN. Please check the format and try again.'};
+  }
+
+>>>>>>> ff605ed (improvements)
   async function analyse(pgn) {
     if(busy) {
       showErr('Analysis already in progress');
@@ -752,6 +895,7 @@ const App = (() => {
     busy=true;
     
     try {
+<<<<<<< HEAD
       const tmp=new Chess();
       const ok=tmp.load_pgn(pgn,{sloppy:true});
       if(!ok){
@@ -762,6 +906,15 @@ const App = (() => {
           return;
         }
       }
+=======
+      const parsed=parseGameInput(pgn);
+      if(!parsed.ok){
+        showErr(parsed.error);
+        busy=false;
+        return;
+      }
+      const tmp=parsed.game;
+>>>>>>> ff605ed (improvements)
       
       const hdr=tmp.header();
       players={w:hdr['White']||'White',b:hdr['Black']||'Black',wr:hdr['WhiteElo']||'?',br:hdr['BlackElo']||'?'};
@@ -782,7 +935,11 @@ const App = (() => {
       for(const mv of hist){wc.move(mv);positions.push(wc.fen());moves.push(mv);}
 
       showProgress();
+<<<<<<< HEAD
       setStatus('running','Analysing…');
+=======
+      setStatus('running','Reviewing...');
+>>>>>>> ff605ed (improvements)
       setStage('evaluate');
 
       const N=hist.length;
@@ -800,7 +957,11 @@ const App = (() => {
         }
         setPct(Math.round((i/(N+5))*72));
       }
+<<<<<<< HEAD
       onEngStatus('sf','ready');
+=======
+      onEngStatus('sf', engines.usingFallback ? 'fallback' : 'ready');
+>>>>>>> ff605ed (improvements)
       setStage('classify');
       setPct(75);
 
@@ -818,12 +979,22 @@ const App = (() => {
       
       // From mover's perspective
       const sfB=before['sf']||{cp:0}, sfA=after['sf']||{cp:0};
+<<<<<<< HEAD
       const cpB=sfB.mate!=null?(sfB.mate>0?9999:-9999):(sfB.cp*(isW?1:-1));
       const cpA=sfA.mate!=null?(sfA.mate>0?-9999:9999):(sfA.cp*(isW?-1:1));
       const loss=cpB-cpA;
       
       evals.push(after);
       cpLoss.push(Math.round(loss));
+=======
+      const cpB=sfB.mate!=null?((sfB.mate>0?9999:-9999)*(isW?1:-1)):(sfB.cp*(isW?1:-1));
+      const cpA=sfA.mate!=null?((sfA.mate>0?9999:-9999)*(isW?1:-1)):(sfA.cp*(isW?1:-1));
+      const loss=cpB-cpA;
+      const adjustedLoss=engines.usingFallback ? Math.round(loss * 0.25) : Math.round(loss);
+      
+      evals.push(after);
+      cpLoss.push(adjustedLoss);
+>>>>>>> ff605ed (improvements)
       
       // IMPROVED CLASSIFICATION LOGIC
       // Check for illegal move suggestions from engine
@@ -850,7 +1021,11 @@ const App = (() => {
         illegal: isIllegal
       };
       
+<<<<<<< HEAD
       classifs.push(cpLossToClass(Math.max(0, loss), isBrilliant, context));
+=======
+      classifs.push(cpLossToClass(Math.max(0, adjustedLoss), isBrilliant, context));
+>>>>>>> ff605ed (improvements)
     }
 
     setStage('report'); setPct(95);
@@ -948,6 +1123,75 @@ const App = (() => {
     if(acc.b!=null&&bv){bv.textContent=acc.b.toFixed(1)+'%';setTimeout(()=>{if(bb)bb.style.width=acc.b+'%';},80);}
   }
 
+<<<<<<< HEAD
+=======
+  function renderCoachSummary(){
+    const title=$('coach-title'), grid=$('coach-grid'), jump=$('coach-jump');
+    if(!title||!grid)return;
+    grid.innerHTML='';
+    if(!moves.length){
+      title.textContent='Load a game to see the story';
+      if(jump)jump.disabled=true;
+      return;
+    }
+
+    const acc=computeAcc();
+    const decisiveIdx=cpLoss.reduce((best,loss,i)=>Math.max(0,loss)>Math.max(0,cpLoss[best]||0)?i:best,0);
+    const bestClass=classifs[decisiveIdx]||'okay';
+    const decisiveMove=moves[decisiveIdx];
+    const decisiveNo=Math.floor(decisiveIdx/2)+1;
+    const decisiveSide=decisiveMove?.color==='w'?players.w:players.b;
+    const problemMoves=classifs.filter(k=>['inaccuracy','mistake','blunder'].includes(k)).length;
+    const bestMoves=classifs.filter(k=>['brilliant','best','excellent'].includes(k)).length;
+    const resultScore=acc.w!=null&&acc.b!=null
+      ? `${players.w} ${acc.w.toFixed(1)}% / ${players.b} ${acc.b.toFixed(1)}%`
+      : 'Accuracy pending';
+
+    title.textContent = problemMoves
+      ? `${problemMoves} key moment${problemMoves===1?'':'s'} found`
+      : 'Clean game with no big misses';
+
+    const items=[
+      {
+        label:'Accuracy',
+        value:resultScore,
+        note:'Higher accuracy means fewer evaluation drops across the game.'
+      },
+      {
+        label:'Key Moment',
+        value:decisiveMove?`${decisiveNo}. ${decisiveMove.san} (${CL[bestClass]?.l||bestClass})`:'None',
+        note:decisiveMove?`${decisiveSide} had the biggest swing here.`:'No moves to review yet.'
+      },
+      {
+        label:'Pattern',
+        value:`${bestMoves} strong / ${problemMoves} to fix`,
+        note:problemMoves?'Start with the mistakes and blunders, then replay the better line.':'Nice control. Use the move list to compare engine choices.'
+      }
+    ];
+
+    items.forEach(item=>{
+      const el=document.createElement('div');
+      el.className='coach-item';
+      const label=document.createElement('div');
+      label.className='coach-label';
+      label.textContent=item.label;
+      const value=document.createElement('div');
+      value.className='coach-value';
+      value.textContent=item.value;
+      const note=document.createElement('div');
+      note.className='coach-note';
+      note.textContent=item.note;
+      el.append(label,value,note);
+      grid.appendChild(el);
+    });
+
+    if(jump){
+      jump.disabled=!decisiveMove;
+      jump.onclick=()=>goTo(decisiveIdx);
+    }
+  }
+
+>>>>>>> ff605ed (improvements)
   function computeAcc(){
     let wl=0,bl=0,wn=0,bn=0;
     cpLoss.forEach((l,i)=>{const loss=Math.max(0,l);if(i%2===0){wl+=loss;wn++;}else{bl+=loss;bn++;}});
@@ -966,7 +1210,11 @@ const App = (() => {
       const wc=classifs.filter((_,i)=>_===k&&i%2===0).length;
       const bc=classifs.filter((_,i)=>_===k&&i%2===1).length;
       const tr=document.createElement('tr');
+<<<<<<< HEAD
       tr.innerHTML=`<td><div class="cname"><div class="cdot" style="background:${cl.c}"></div><span style="font-size:13px">${cl.e}</span><span style="color:${cl.c};font-size:11px;font-weight:600">${cl.l}</span></div></td><td><span class="cnum" style="color:${cl.c}">${wc}</span></td><td style="font-size:10px;color:var(--muted)">${cl.sym||'—'}</td><td><span class="cnum" style="color:${cl.c}">${bc}</span></td>`;
+=======
+      tr.innerHTML=`<td><div class="cname"><div class="cdot" style="background:${cl.c}"></div><span class="cicon" style="color:${cl.c}"><i class="fas ${cl.icon}"></i></span><span style="color:${cl.c};font-size:11px;font-weight:600">${cl.l}</span></div></td><td><span class="cnum" style="color:${cl.c}">${wc}</span></td><td style="font-size:10px;color:var(--muted)">${cl.sym||'—'}</td><td><span class="cnum" style="color:${cl.c}">${bc}</span></td>`;
+>>>>>>> ff605ed (improvements)
       tb.appendChild(tr);
     });
   }
@@ -1052,6 +1300,10 @@ const App = (() => {
     $('import-card').classList.remove('hidden');
     updatePlayerStrips();
     renderAccuracies();
+<<<<<<< HEAD
+=======
+    renderCoachSummary();
+>>>>>>> ff605ed (improvements)
     renderClassifTable();
     renderEvalGraph();
     updateMoveList();
@@ -1096,10 +1348,21 @@ const App = (() => {
 
   /* ── SIDEBAR ──────────────────── */
   function setupSidebar(){
+<<<<<<< HEAD
     const cb=$('sb-collapse');
     if(cb)cb.addEventListener('click',e=>{e.preventDefault();$('sidebar').classList.toggle('collapsed');});
     const th=$('theme-toggle');
     if(th)th.addEventListener('click',e=>{e.preventDefault();const l=document.documentElement.classList.toggle('light-ui');th.querySelector('.theme-label').textContent=l?'Dark UI':'Light UI';});
+=======
+    const cb=$('sidebar-collapse');
+    if(cb)cb.addEventListener('click',e=>{e.preventDefault();document.querySelector('.sidebar')?.classList.toggle('collapsed');});
+    const th=$('theme-toggle');
+    if(th)th.addEventListener('click',e=>{
+      e.preventDefault();
+      const l=document.documentElement.classList.toggle('light-ui');
+      th.innerHTML=`<i class="fas fa-adjust"></i> ${l?'Dark UI':'Light UI'}`;
+    });
+>>>>>>> ff605ed (improvements)
     try{const p=JSON.parse(localStorage.getItem('playerProfile')||'{}');if(p.name)document.querySelectorAll('.pdn').forEach(el=>el.textContent=p.name);}catch(e){}
   }
 
@@ -1143,6 +1406,7 @@ const App = (() => {
 
   /* ── IMPORT ───────────────────── */
   const SAMPLE=`[Event "World Chess Championship Match"]\n[White "Kasparov, Garry"]\n[Black "Deep Blue"]\n[WhiteElo "2795"]\n[BlackElo "2800"]\n[Result "1-0"]\n1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Ba4 Nf6 5. O-O Be7 6. Re1 b5 7. Bb3 d6 8. c3 O-O 9. h3 Nb8 10. d4 Nbd7 11. c4 c6 12. cxb5 axb5 13. Nc3 Bb7 14. Bg5 b4 15. Nb1 h6 16. Bh4 c5 17. dxe5 Nxe4 18. Bxe7 Qxe7 19. exd6 Qf6 20. Nbd2 Nxd6 21. Nc4 Nxc4 22. Bxc4 Nb6 23. Ne5 Rae8 24. Bxf7+ Rxf7 25. Nxf7 Rxe1+ 26. Qxe1 Kxf7 27. Qe3 Qg5 28. Qxg5 hxg5 29. b3 Ke6 30. a3 Kd6 31. axb4 cxb4 32. Ra5 Nd5 33. f3 Bc8 34. Kf2 Bf5 35. Ra7 g6 36. Ra6+ Kc5 37. Ke1 Nf4 38. g3 Nxh3 39. Kd2 Kb5 40. Rd6 Kc5 41. Ra6 Nf2 42. g4 Bd3 43. Re6 1-0`;
+<<<<<<< HEAD
   function setupImport(){
     document.querySelectorAll('.stab').forEach(t=>{
       t.addEventListener('click',()=>{
@@ -1158,6 +1422,53 @@ const App = (() => {
       $('abtn').disabled=true;$('abtn').innerHTML='⏳ Analysing…';
       await analyse(pgn);
       $('abtn').disabled=false;$('abtn').innerHTML='<i class="fas fa-magnifying-glass"></i>  Analyse Game';
+=======
+
+  function getSavedGameForReview(){
+    try {
+      const urlId=new URLSearchParams(window.location.search).get('gameId');
+      const last=sessionStorage.getItem('lastPlayedGame');
+      if(last){
+        const game=JSON.parse(last);
+        if(game?.pgn && (!urlId || game.id===urlId)) return game;
+      }
+      const games=JSON.parse(localStorage.getItem('chessGames')||'[]');
+      if(!Array.isArray(games)||!games.length)return null;
+      if(urlId){
+        const match=games.find(g=>String(g.id)===urlId);
+        if(match?.pgn)return match;
+      }
+      return [...games].reverse().find(g=>g?.pgn)||null;
+    } catch(e) {
+      logError('Could not read saved game', e);
+      return null;
+    }
+  }
+
+  function loadSavedGameForReview(){
+    const saved=getSavedGameForReview();
+    if(!saved?.pgn || busy || moves.length)return;
+    const name=saved.name||saved.displayName||'Latest saved game';
+    const ta=$('pgn-ta');
+    if(ta)ta.value=saved.pgn;
+    const status=$('imp-status');
+    if(status){
+      status.textContent=`Loaded ${name}. Reviewing now...`;
+      status.className='imp-status';
+      status.style.display='';
+    }
+    analyse(saved.pgn);
+  }
+
+    function setupImport(){
+    $('abtn').addEventListener('click',async()=>{
+      const pgn=$('pgn-ta').value.trim();
+      $('pgn-ta').value=pgn;
+      const s=$('imp-status');s.textContent='';s.style.display='none';
+      $('abtn').disabled=true;$('abtn').innerHTML='<i class="fas fa-spinner fa-spin"></i> Reviewing...';
+      await analyse(pgn);
+      $('abtn').disabled=false;$('abtn').innerHTML='<i class="fas fa-magnifying-glass-chart"></i> Review PGN';
+>>>>>>> ff605ed (improvements)
     });
   }
 
@@ -1213,4 +1524,8 @@ document.addEventListener('DOMContentLoaded',()=>{
     logError(err);
     document.body.innerHTML=`<div style="color:#e07070;padding:24px;font-family:monospace">${err}</div>`;
   }
+<<<<<<< HEAD
 });
+=======
+});
+>>>>>>> ff605ed (improvements)

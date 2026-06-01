@@ -6,7 +6,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ── Chess piece image path ──────────────────────────────────────────
   // Edit this if your images live in a different folder
+<<<<<<< HEAD
   const PIECE_IMG_PATH = './../../images/Chesspieces/';
+=======
+  const PIECE_IMG_PATH = 'https://hardik1104640.github.io/Royal-Chess-Arena.github.io/Images/Chesspieces/';
+>>>>>>> ff605ed (improvements)
 
   // Unicode fallbacks if an image fails to load
   const PIECE_UNICODE = {

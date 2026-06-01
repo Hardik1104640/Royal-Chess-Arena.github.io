@@ -3,12 +3,18 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
+<<<<<<< HEAD
   <title>Game Analysis — Royal Chess Arena</title>
+=======
+  <title>Game Review - Royal Chess Arena</title>
+  <link rel="stylesheet" href="../../css/home.css"/>
+>>>>>>> ff605ed (improvements)
   <link rel="stylesheet" href="../css/analysis.css"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
 </head>
 <body>
+<<<<<<< HEAD
 <div class="app-shell">
 
   <!-- SIDEBAR -->
@@ -43,6 +49,55 @@
     </div>
   </aside>
 
+=======
+<div class="app-shell">  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="brand">
+      <span>Royal Chess Arena</span>
+    </div>
+
+    <div class="user-block">
+      <div id="sidebar-avatar" class="avatar small">&nbsp;</div>
+      <div class="user-info">
+        <div id="sidebar-name" class="user-name">Player</div>
+        <div id="sidebar-status" class="user-status">Beginner</div>
+        <div class="user-stats" aria-hidden="true">
+          <div class="user-rating">Rating: <span id="sidebar-rating">1200</span></div>
+          <div class="games-stats">Games: <span id="sidebar-games">0</span></div>
+        </div>
+        <div class="user-stars">
+          <div class="stars hidden" id="sidebar-stars">
+            <span class="star" data-index="0"></span>
+            <span class="star" data-index="1"></span>
+            <span class="star" data-index="2"></span>
+            <span class="star" data-index="3"></span>
+            <span class="star" data-index="4"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <a href="../../welcome.html" class="nav-item"><i class="fas fa-home"></i> Home</a>
+      <a href="./play.html" class="nav-item active"><i class="fas fa-chess"></i> Play</a>
+      <a href="puzzles.html" class="nav-item"><i class="fas fa-puzzle-piece"></i> Puzzles</a>
+      <a href="#" class="nav-item highlight"><i class="fas fa-gem"></i>Memberships</a>
+    </nav>
+
+    <div class="sidebar-search">
+      <input type="search" placeholder="Search" aria-label="Search" />
+    </div>
+
+    <div class="sidebar-bottom">
+      <a href="#" id="theme-toggle" class="nav-item small"><i class="fas fa-adjust"></i> Light UI</a>
+      <a href="#" id="sidebar-collapse" class="nav-item small"><i class="fas fa-compress"></i> Collapse</a>
+      <a href="/settings" class="nav-item small"><i class="fas fa-cog"></i> Settings</a>
+      <a href="/support" class="nav-item small"><i class="fas fa-life-ring"></i> Support</a>
+      <div class="separator"></div>
+      <a href="/logout?returnTo=/sidebar/html/play.html" class="nav-item small logout"><i class="fas fa-sign-out-alt"></i> Log Out</a>
+    </div>
+  </aside>
+>>>>>>> ff605ed (improvements)
   <!-- MAIN -->
   <main class="main">
 
@@ -51,13 +106,21 @@
       <div class="tb-left">
         <span class="tb-brand">Royal Chess Arena</span>
         <div class="tb-sep"></div>
+<<<<<<< HEAD
         <span class="tb-page"><i class="fas fa-magnifying-glass-chart" style="color:var(--accent);margin-right:5px"></i>Game Analysis</span>
+=======
+        <span class="tb-page"><i class="fas fa-magnifying-glass-chart" style="color:var(--accent);margin-right:5px"></i>Game Review</span>
+>>>>>>> ff605ed (improvements)
       </div>
       <div class="tb-right">
         <!-- Global SF status -->
         <div class="sf-row">
           <div class="sfdot loading" id="sf-dot-sf"></div>
+<<<<<<< HEAD
           <span id="sf-txt-sf" style="font-size:10px">Loading SF16…</span>
+=======
+          <span id="sf-txt-sf" style="font-size:10px">Loading SF16...</span>
+>>>>>>> ff605ed (improvements)
         </div>
         <span class="sbadge idle" id="status-badge">Ready</span>
         <div class="tb-av pdn">P</div>
@@ -74,7 +137,11 @@
 
         <!-- Black strip -->
         <div class="pstrip" id="bstrip">
+<<<<<<< HEAD
           <div class="pav" style="background:linear-gradient(135deg,#2a2c38,#16181f)">♚</div>
+=======
+          <div class="pav" style="background:linear-gradient(135deg,#2a2c38,#16181f)"><i class="fas fa-user"></i></div>
+>>>>>>> ff605ed (improvements)
           <div><div class="pname">Black</div></div>
           <div class="prat"></div>
           <div class="pcap" id="bcap"></div>
@@ -102,7 +169,11 @@
 
         <!-- White strip -->
         <div class="pstrip" id="wstrip">
+<<<<<<< HEAD
           <div class="pav" style="background:linear-gradient(135deg,#e8cfa0,#b58863);color:#2a2018">♔</div>
+=======
+          <div class="pav" style="background:linear-gradient(135deg,#e8cfa0,#b58863);color:#2a2018"><i class="fas fa-user"></i></div>
+>>>>>>> ff605ed (improvements)
           <div><div class="pname">White</div></div>
           <div class="prat"></div>
           <div class="pcap" id="wcap"></div>
@@ -111,6 +182,7 @@
         <!-- Traverser -->
         <div class="trav">
           <button class="tb2" id="btn-start" title="Start (Home)"><i class="fas fa-backward-step"></i></button>
+<<<<<<< HEAD
           <button class="tb2" id="btn-prev"  title="Previous (←)"><i class="fas fa-chevron-left"></i></button>
           <div class="tsep"></div>
           <button class="tb2" id="btn-play"  title="Auto-play"><i class="fas fa-play"></i></button>
@@ -118,6 +190,15 @@
           <button class="tb2" id="btn-next"  title="Next (→)"><i class="fas fa-chevron-right"></i></button>
           <button class="tb2" id="btn-end"   title="End (End)"><i class="fas fa-forward-step"></i></button>
           <span class="tinfo" id="tinfo">—</span>
+=======
+          <button class="tb2" id="btn-prev"  title="Previous"><i class="fas fa-chevron-left"></i></button>
+          <div class="tsep"></div>
+          <button class="tb2" id="btn-play"  title="Auto-play"><i class="fas fa-play"></i></button>
+          <div class="tsep"></div>
+          <button class="tb2" id="btn-next"  title="Next"><i class="fas fa-chevron-right"></i></button>
+          <button class="tb2" id="btn-end"   title="End (End)"><i class="fas fa-forward-step"></i></button>
+          <span class="tinfo" id="tinfo">Start</span>
+>>>>>>> ff605ed (improvements)
         </div>
 
         <!-- Board toolbar -->
@@ -132,6 +213,7 @@
       <!-- Analysis panel -->
       <div class="apanel">
         <div class="pscroll">
+<<<<<<< HEAD
 
           <!-- ENGINE SELECTOR TABS -->
           <div class="engine-tabs">
@@ -139,36 +221,63 @@
             <button class="eng-tab active" data-eng="sf">
               <span class="eng-tab-name" style="color:#0076d6">STOCKFISH</span>
               <span class="eng-tab-elo">v16 · ~3500 elo</span>
+=======
+          <!-- Engine depth review -->
+          <div class="engine-tabs engine-depth-overview" aria-label="Depth review engines">
+            <div class="eng-tab active" data-eng="sf">
+              <span class="eng-tab-name" style="color:#0076d6">STOCKFISH</span>
+              <span class="eng-tab-elo">v16 - ~3500 elo</span>
+>>>>>>> ff605ed (improvements)
               <div style="display:flex;align-items:center;gap:4px;margin-top:2px">
                 <div class="sfdot loading" id="sf-dot-sf2" style="width:5px;height:5px"></div>
                 <span style="font-size:9px;color:var(--muted)" id="sf-txt-sf2">WASM</span>
               </div>
+<<<<<<< HEAD
             </button>
             <!-- Lc0 — simulated -->
             <button class="eng-tab" data-eng="lc0">
               <span class="eng-tab-name" style="color:#e84393">LEELA (LC0)</span>
               <span class="eng-tab-elo">v0.32 · ~3550 elo</span>
+=======
+            </div>
+            <div class="eng-tab" data-eng="lc0">
+              <span class="eng-tab-name" style="color:#e84393">LEELA CHESS ZERO</span>
+              <span class="eng-tab-elo">v0.32 - ~3550 elo</span>
+>>>>>>> ff605ed (improvements)
               <div style="display:flex;align-items:center;gap:4px;margin-top:2px">
                 <div class="sfdot" id="sf-dot-lc0" style="background:#e8c842;width:5px;height:5px"></div>
                 <span style="font-size:9px;color:var(--muted)" id="sf-txt-lc0">Neural</span>
               </div>
+<<<<<<< HEAD
             </button>
             <!-- Komodo Dragon — simulated -->
             <button class="eng-tab" data-eng="kd">
               <span class="eng-tab-name" style="color:#ff8c00">KOM. DRAGON</span>
               <span class="eng-tab-elo">v3.3 · ~3480 elo</span>
+=======
+            </div>
+            <div class="eng-tab" data-eng="kd">
+              <span class="eng-tab-name" style="color:#ff8c00">KOMODO DRAGON</span>
+              <span class="eng-tab-elo">v3.3 - ~3480 elo</span>
+>>>>>>> ff605ed (improvements)
               <div style="display:flex;align-items:center;gap:4px;margin-top:2px">
                 <div class="sfdot" id="sf-dot-kd" style="background:#e8c842;width:5px;height:5px"></div>
                 <span style="font-size:9px;color:var(--muted)" id="sf-txt-kd">NNUE</span>
               </div>
+<<<<<<< HEAD
             </button>
           </div>
 
+=======
+            </div>
+          </div>
+>>>>>>> ff605ed (improvements)
           <!-- Import card -->
           <div class="pc" id="import-card">
             <div class="pc-head">
               <i class="fas fa-file-import hi" style="color:var(--accent)"></i>
               <h3>Load Game</h3>
+<<<<<<< HEAD
               <span class="pc-badge">PGN · FEN · Username</span>
             </div>
             <div class="pc-body">
@@ -183,6 +292,25 @@
                 <i class="fas fa-magnifying-glass"></i>  Analyse Game
               </button>
               <div class="imp-status" id="imp-status" style="display:none"></div>
+=======
+              <span class="pc-badge">PGN review</span>
+            </div>
+            <div class="pc-body">
+              <textarea class="pgn-ta" id="pgn-ta" placeholder="Paste PGN here" spellcheck="false"></textarea>
+              <button class="abtn" id="abtn">
+                <i class="fas fa-magnifying-glass-chart"></i> Review PGN
+              </button>              <div class="imp-status" id="imp-status" style="display:none"></div>
+              <section class="played-games-panel" id="games-list-section" style="display:none">
+                <div class="played-games-head">
+                  <div>
+                    <div class="played-kicker">Played Games</div>
+                    <div class="played-title">Analyze your games</div>
+                  </div>
+                  <div class="played-stats"><span id="games-played">0</span> games <span id="win-rate" class="played-win">0%</span></div>
+                </div>
+                <div id="games-list"></div>
+              </section>
+>>>>>>> ff605ed (improvements)
             </div>
           </div>
 
@@ -190,7 +318,11 @@
           <div class="pc hidden" id="prog-card">
             <div class="pc-head">
               <i class="fas fa-gear fa-spin hi" style="color:var(--accent2)"></i>
+<<<<<<< HEAD
               <h3>Analysing…</h3>
+=======
+              <h3>Reviewing...</h3>
+>>>>>>> ff605ed (improvements)
             </div>
             <div class="pc-body">
               <div class="prog-stages">
@@ -199,7 +331,11 @@
                 <div class="pst" data-stage="report"><i class="fas fa-chart-line"></i> Report</div>
               </div>
               <div class="pbar"><div class="pfill" id="pfill"></div></div>
+<<<<<<< HEAD
               <div class="pdet"><span id="plabel">Starting…</span><span id="ppct">0%</span></div>
+=======
+              <div class="pdet"><span id="plabel">Starting...</span><span id="ppct">0%</span></div>
+>>>>>>> ff605ed (improvements)
             </div>
           </div>
 
@@ -207,13 +343,19 @@
           <div class="pc hidden" id="eng-card">
             <div class="pc-head">
               <i class="fas fa-microchip hi" style="color:var(--accent2)"></i>
+<<<<<<< HEAD
               <h3>Engine Analysis</h3>
               <span class="pc-badge" id="eng-depth-b">depth 20</span>
+=======
+              <h3>Depth Review</h3>
+              <span class="pc-badge" id="eng-depth-b">all engines</span>
+>>>>>>> ff605ed (improvements)
             </div>
             <div class="pc-body">
               <div class="eng-header">
                 <div class="eng-score eq" id="eng-score">+0.00</div>
                 <div class="eng-meta">
+<<<<<<< HEAD
                   <span class="eng-name-badge sf-badge" id="eng-name-b">SF 16</span>
                   <span class="eng-dbadge">NNUE · Depth 20 · MultiPV 3</span>
                 </div>
@@ -221,13 +363,25 @@
               <div id="eng-lines"></div>
               <!-- Multi-engine comparison -->
               <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:10px 0 6px">Engine Comparison</div>
+=======
+                  <span class="eng-name-badge sf-badge" id="eng-name-b">Consensus</span>
+                  <span class="eng-dbadge">Stockfish - Leela Chess Zero - Komodo Dragon</span>
+                </div>
+              </div>
+              <div id="eng-lines"></div>
+              <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:10px 0 6px">Engine Consensus</div>
+>>>>>>> ff605ed (improvements)
               <div class="eng-compare" id="eng-compare"></div>
             </div>
           </div>
 
           <!-- Classification card -->
           <div class="clcard hidden" id="cl-card">
+<<<<<<< HEAD
             <div class="cl-icon" id="cl-icon">—</div>
+=======
+            <div class="cl-icon" id="cl-icon"><i class="fas fa-circle-info"></i></div>
+>>>>>>> ff605ed (improvements)
             <div class="cl-body">
               <div style="display:flex;align-items:center;gap:6px">
                 <span class="cl-san" id="cl-san">—</span>
@@ -252,6 +406,19 @@
             <!-- REPORT -->
             <div class="tabpanel" data-tp="report">
               <div class="pc-body">
+<<<<<<< HEAD
+=======
+                <div class="coach-card" id="coach-card">
+                  <div class="coach-head">
+                    <div>
+                      <div class="coach-kicker">Coach Summary</div>
+                      <div class="coach-title" id="coach-title">Review ready</div>
+                    </div>
+                    <button class="coach-jump" id="coach-jump" type="button">Jump to key move</button>
+                  </div>
+                  <div class="coach-grid" id="coach-grid"></div>
+                </div>
+>>>>>>> ff605ed (improvements)
                 <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:7px">Evaluation Graph</div>
                 <div class="egraph-wrap" id="egraph-wrap">
                   <div class="egzero"></div>
@@ -294,6 +461,7 @@
 
           <!-- Empty state -->
           <div class="empty" id="empty-state">
+<<<<<<< HEAD
             <span class="ei">♟</span>
             <p>
               Paste a <strong>PGN</strong> or <strong>FEN</strong> and click<br>
@@ -302,6 +470,16 @@
                 <strong style="color:var(--accent)">Stockfish 16 WASM</strong> · Depth 20 · MultiPV 3<br>
                 + <strong style="color:#e84393">Lc0</strong> neural &amp; <strong style="color:#ff8c00">Komodo Dragon</strong> perspectives<br><br>
                 <span style="opacity:.6">← → Home End · F flip · click graph dots</span>
+=======
+            <span class="ei"><i class="fas fa-chess-board"></i></span>
+            <p>
+              Paste a <strong>PGN</strong> and click<br>
+              <strong>Review PGN</strong> to begin.<br><br>
+              <span style="font-size:11px;color:var(--muted)">
+                <strong style="color:var(--accent)">Stockfish 16 WASM</strong> - Depth 20 - MultiPV 3<br>
+                + <strong style="color:#e84393">Lc0</strong> neural &amp; <strong style="color:#ff8c00">Komodo Dragon</strong> perspectives<br><br>
+                <span style="opacity:.6">Arrow keys - Home - End - F flip - click graph dots</span>
+>>>>>>> ff605ed (improvements)
               </span>
             </p>
           </div>
@@ -314,6 +492,14 @@
 </div>
 
 <div id="toasts" class="toasts"></div>
+<<<<<<< HEAD
 <script src="../js/analysis.js"></script>
 </body>
 </html>
+=======
+<script src="../../js/guest-account.js"></script>
+<script src="../../js/home.js"></script>
+<script src="../js/analysis.js"></script>
+</body>
+</html>
+>>>>>>> ff605ed (improvements)

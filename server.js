@@ -7,7 +7,11 @@ const cookieParser = require('cookie-parser');
 const session = require('express-session');
 const bcrypt = require('bcrypt');
 const fs = require('fs');
+<<<<<<< HEAD
 const { init, findUserByEmail, createUser } = require('./db');
+=======
+const { init, findUserByEmail, createUser, allocateGuestName } = require('./db');
+>>>>>>> ff605ed (improvements)
 
 // Device-based login tracking: deviceId -> { userId, sessionId, ws }
 const activeDevices = new Map();
@@ -137,7 +141,14 @@ app.use((req, res, next) => {
 // Routes
 app.get('/profile', requireAuth, async (req,res)=>{
   try {
+<<<<<<< HEAD
     const user = await findUserByEmail(req.session.userEmail);
+=======
+    const sessionEmail = req.session.user && req.session.user.email
+      ? req.session.user.email
+      : req.session.userEmail;
+    const user = await findUserByEmail(sessionEmail);
+>>>>>>> ff605ed (improvements)
     if (!user) {
       return res.status(404).json({ error: 'USER_NOT_FOUND', message: 'User not found' });
     }
@@ -272,6 +283,16 @@ app.post('/signup', async (req,res)=>{
       });
     }
 
+<<<<<<< HEAD
+=======
+    if(/^guest_\d+$/i.test(display_name)) {
+      return res.status(400).json({
+        error: 'RESERVED_DISPLAY_NAME',
+        message: 'Display names like guest_1 are reserved for guest accounts. Please choose another name.'
+      });
+    }
+
+>>>>>>> ff605ed (improvements)
     // Password strength validation
     if(password.length < 8) {
       return res.status(400).json({
@@ -293,6 +314,14 @@ app.post('/signup', async (req,res)=>{
       });
 
       // Create session
+<<<<<<< HEAD
+=======
+      req.session.user = {
+        id: user.id,
+        email: user.email,
+        displayName: user.display_name
+      };
+>>>>>>> ff605ed (improvements)
       req.session.userId = user.id;
       req.session.userEmail = user.email;
       req.session.displayName = user.display_name;
@@ -304,7 +333,12 @@ app.post('/signup', async (req,res)=>{
         user: {
           id: user.id,
           email: user.email,
+<<<<<<< HEAD
           display_name: user.display_name
+=======
+          display_name: user.display_name,
+          displayName: user.display_name
+>>>>>>> ff605ed (improvements)
         }
       });
 
@@ -333,6 +367,44 @@ app.post('/signup', async (req,res)=>{
   }
 });
 
+<<<<<<< HEAD
+=======
+// Guest login
+app.post('/guest-login', async (req, res) => {
+  try {
+    const guestName = await allocateGuestName();
+
+    req.session.user = {
+      id: null,
+      email: `${guestName}@guest.local`,
+      displayName: guestName,
+      guest: true
+    };
+
+    req.session.save((err) => {
+      if (err) {
+        console.error('Guest session save error:', err);
+        return res.status(500).json({
+          error: 'SESSION_ERROR',
+          message: 'Failed to create guest session'
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        guestName
+      });
+    });
+  } catch (err) {
+    console.error('Guest login error:', err);
+    res.status(500).json({
+      error: 'SERVER_ERROR',
+      message: 'Unable to continue as guest. Please try again.'
+    });
+  }
+});
+
+>>>>>>> ff605ed (improvements)
 // Login
 app.post('/login', async (req,res)=>{
   try {
@@ -468,7 +540,14 @@ app.get('/whoami', (req,res) => {
       return res.json({ email: req.session.user.email, displayName: req.session.user.displayName || null });
     }
     if (req.session.userEmail) {
+<<<<<<< HEAD
       return res.json({ email: req.session.userEmail });
+=======
+      return res.json({
+        email: req.session.userEmail,
+        displayName: req.session.displayName || null
+      });
+>>>>>>> ff605ed (improvements)
     }
   }
   res.json({ email: null });

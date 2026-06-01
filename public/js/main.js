@@ -34,8 +34,21 @@ themeBtn?.addEventListener('click', () => {
 document.addEventListener('DOMContentLoaded', () => {
   const headerBtn = document.getElementById('continue-guest-header');
   const heroBtn = document.getElementById('continue-guest-hero');
+<<<<<<< HEAD
   const handler = (ev) => {
     if (window.GuestPool) GuestPool.assign();
+=======
+  const handler = async (ev) => {
+    ev.preventDefault();
+    if (!window.GuestPool) return;
+
+    try {
+      await GuestPool.assign();
+      window.location.href = 'welcome.html';
+    } catch (error) {
+      alert(error.message || 'Unable to continue as guest. Please try again.');
+    }
+>>>>>>> ff605ed (improvements)
   };
   headerBtn?.addEventListener('click', handler);
   heroBtn?.addEventListener('click', handler);
@@ -412,4 +425,8 @@ function adjustBodyPadding() {
   document.body.style.paddingBottom = visible ? (phoneNav.offsetHeight + 4) + 'px' : '';
 }
 window.addEventListener('resize', adjustBodyPadding, { passive: true });
+<<<<<<< HEAD
 adjustBodyPadding();
+=======
+adjustBodyPadding();
+>>>>>>> ff605ed (improvements)

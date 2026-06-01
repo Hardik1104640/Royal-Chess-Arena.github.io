@@ -141,12 +141,29 @@ function saveFinishedGame(pgn) {
   try {
     const games = JSON.parse(localStorage.getItem('chessGames') || '[]');
     const gameNum = games.length + 1;
+<<<<<<< HEAD
     games.push({
       name: `Game ${gameNum}`,
       pgn: pgn,
       date: new Date().toISOString()
     });
     localStorage.setItem('chessGames', JSON.stringify(games));
+=======
+    const savedGame = {
+      id: `local_game_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      name: `Game ${gameNum}`,
+      pgn: pgn,
+      date: new Date().toISOString()
+    };
+    games.push(savedGame);
+    localStorage.setItem('chessGames', JSON.stringify(games));
+    if (window.saveGameForReview) {
+      window.saveGameForReview(savedGame);
+    }
+    if (window.addGameReviewButton) {
+      window.addGameReviewButton();
+    }
+>>>>>>> ff605ed (improvements)
     console.log('[Play] Game saved for review:', pgn.substring(0, 50) + '...');
   } catch (error) {
     console.error('[Play] Failed to save game:', error);
@@ -921,6 +938,27 @@ document.addEventListener('DOMContentLoaded', () => {
       window.location.href = './play.html';
     };
 
+<<<<<<< HEAD
+=======
+    const reviewBtn = document.createElement('button');
+    reviewBtn.className = 'btn';
+    reviewBtn.style.background = 'linear-gradient(135deg, rgb(58, 160, 255), rgb(100, 255, 218))';
+    reviewBtn.style.color = '#08111f';
+    reviewBtn.style.padding = '12px 20px';
+    reviewBtn.style.margin = '10px';
+    reviewBtn.style.fontSize = '14px';
+    reviewBtn.style.fontWeight = '700';
+    reviewBtn.style.borderRadius = '5px';
+    reviewBtn.style.border = 'none';
+    reviewBtn.style.cursor = 'pointer';
+    reviewBtn.textContent = 'Review This Game';
+    reviewBtn.onclick = () => {
+      if (window.openGameReview) window.openGameReview();
+      else window.location.href = './analysis.html';
+    };
+
+    modal.appendChild(reviewBtn);
+>>>>>>> ff605ed (improvements)
     modal.appendChild(btn1);
     modal.appendChild(btn2);
 

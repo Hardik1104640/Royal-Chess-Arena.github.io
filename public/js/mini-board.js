@@ -5,11 +5,19 @@
 
   // candidate directories (relative to public/index.html)
   const dirs = [
+<<<<<<< HEAD
     '../../images/Chesspieces/',  // primary path first - matches our Express route
     '../...images/Chesspieces/',
     '../../images/Chesspieces/',
     '../../Images/Chesspieces/',
     '../../Images/Chesspieces/'
+=======
+    '/images/Chesspieces/',  // primary path first - matches our Express route
+    './images/Chesspieces/',
+    '../images/Chesspieces/',
+    './Images/Chesspieces/',
+    '/Images/Chesspieces/'
+>>>>>>> ff605ed (improvements)
   ];
   
   // Debug which directory we're checking

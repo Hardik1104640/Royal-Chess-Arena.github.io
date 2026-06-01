@@ -94,7 +94,11 @@
                         <span class="divider">Or continue with</span>
                         <div class="social-buttons">
                             <button type="button" class="btn social google">
+<<<<<<< HEAD
                                 <img src="../images/google.svg" alt="Google" class="google-icon">
+=======
+                                <img src="/images/google.svg" alt="Google" class="google-icon">
+>>>>>>> ff605ed (improvements)
                                 Google
                             </button>
                             <button type="button" class="btn social github">
@@ -122,13 +126,29 @@
     <script src="./js/guest-account.js" defer></script>
     <script src="./js/cred.js" defer></script>
     <script>
+<<<<<<< HEAD
         document.getElementById('login-guest-btn').addEventListener('click', (e) => {
             e.preventDefault();
             if(window.GuestPool) {
                 GuestPool.assign();
                 window.location.href = 'welcome.html';
+=======
+        document.getElementById('login-guest-btn').addEventListener('click', async (e) => {
+            e.preventDefault();
+            if(window.GuestPool) {
+                try {
+                    await GuestPool.assign();
+                    window.location.href = 'welcome.html';
+                } catch (error) {
+                    alert(error.message || 'Unable to continue as guest. Please try again.');
+                }
+>>>>>>> ff605ed (improvements)
             }
         });
     </script>
 </body>
+<<<<<<< HEAD
 </html>
+=======
+</html>
+>>>>>>> ff605ed (improvements)

@@ -9,11 +9,33 @@ document.addEventListener('DOMContentLoaded', () => {
     // Star thresholds (each star is full when rating > threshold)
     const STAR_THRESHOLDS = [2000, 2200, 2400, 2600, 2800];
 
+<<<<<<< HEAD
     const renderUser = (data) => {
         // Resolve name from common server fields in priority order
         const gamesPlayed = (data && Number.isFinite(Number(data.gamesPlayed))) ? Number(data.gamesPlayed) : 0;
         const resolvedName = (data && (data.displayName || data.name || data.username || data.email)) ?
             (data.displayName || data.name || data.username || data.email) : 'Player';
+=======
+    function getStoredUserProfile(email) {
+        try {
+            const profile = JSON.parse(localStorage.getItem('userProfile') || 'null');
+            if (!profile || profile.guest) return null;
+            if (email && profile.email && profile.email !== email) return null;
+            return profile;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    const renderUser = (data) => {
+        // Resolve name from common server fields in priority order
+        const gamesPlayed = (data && Number.isFinite(Number(data.gamesPlayed))) ? Number(data.gamesPlayed) : 0;
+        const storedProfile = getStoredUserProfile(data && data.email);
+        const resolvedName = (data && (data.displayName || data.name || data.username))
+            || (storedProfile && (storedProfile.displayName || storedProfile.username))
+            || (data && data.email)
+            || 'Player';
+>>>>>>> ff605ed (improvements)
         const name = resolvedName;
         const isGuest = window.GuestPool && GuestPool.isGuest();
         const welcomeText = isGuest ? `Welcome ${escapeHtml(name)}!` : `Welcome back, ${escapeHtml(name)}!`;
